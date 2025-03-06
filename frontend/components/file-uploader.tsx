@@ -1,10 +1,10 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useRef } from "react"
 import { Upload, X, FileText } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import axios from "axios"
 
 interface FileUploaderProps {
   onFilesAdded: (files: File[]) => void
@@ -22,6 +22,7 @@ export function FileUploader({
   const [isDragging, setIsDragging] = useState(false)
   const [files, setFiles] = useState<File[]>([])
   const [errors, setErrors] = useState<string[]>([])
+  const [ocrResults, setOcrResults] = useState<any[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -91,7 +92,7 @@ export function FileUploader({
     return validFiles
   }
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     setIsDragging(false)
 
@@ -100,15 +101,17 @@ export function FileUploader({
       const newFiles = [...files, ...validFiles]
       setFiles(newFiles)
       onFilesAdded(validFiles)
+      await uploadFiles(validFiles)
     }
   }
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const validFiles = validateFiles(e.target.files)
     if (validFiles.length > 0) {
       const newFiles = [...files, ...validFiles]
       setFiles(newFiles)
       onFilesAdded(validFiles)
+      await uploadFiles(validFiles)
     }
 
     // Reset the input value so the same file can be selected again
@@ -126,6 +129,24 @@ export function FileUploader({
   const handleButtonClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click()
+    }
+  }
+
+  const uploadFiles = async (files: File[]) => {
+    const formData = new FormData()
+    files.forEach((file) => {
+      formData.append("file", file)
+    })
+
+    try {
+      const response = await axios.post("http://127.0.0.1:8000/upload/", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      })
+      setOcrResults((prev) => [...prev, response.data])
+    } catch (error) {
+      console.error("Error uploading files:", error)
     }
   }
 
@@ -229,7 +250,17 @@ export function FileUploader({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <div className="mt-4">
+        <h3 className="text-lg font-medium">OCR Results:</h3>
+        <ul className="list-disc pl-5">
+          {ocrResults.map((result, index) => (
+            <li key={index} className="text-sm">
+              <strong>{result.filename}:</strong> {result.ocr_results}
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   )
 }
-
