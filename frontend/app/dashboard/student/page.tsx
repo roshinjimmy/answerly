@@ -58,7 +58,7 @@ export default function StudentDashboard() {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen">
-        <Sidebar>
+        <Sidebar className="z-10">
           <SidebarHeader className="border-b px-6 py-3">
             <Link href="/" className="flex items-center gap-2">
               <BookOpen className="h-6 w-6" />
@@ -134,7 +134,7 @@ export default function StudentDashboard() {
             </div>
           </SidebarFooter>
         </Sidebar>
-        <div className="flex-1">
+        <div className="flex-1 ml-75 ">
           <DashboardHeader>
             <div className="flex items-center">
               <SidebarTrigger className="mr-2" />
