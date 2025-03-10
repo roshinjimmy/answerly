@@ -717,7 +717,7 @@ export default function StudentDashboard() {
                             <select className="w-full rounded-md border p-2">
                               <option>Year 1</option>
                               <option>Year 2</option>
-                              <option selected>Year 3</option>
+                              <option >Year 3</option>
                               <option>Year 4</option>
                             </select>
                           </div>

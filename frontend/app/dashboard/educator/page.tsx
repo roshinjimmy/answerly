@@ -72,7 +72,7 @@ export default function EducatorDashboard() {
                     <SidebarMenuButton asChild isActive={activeTab === "assignments"}>
                       <Link href="#assignments" onClick={() => setActiveTab("assignments")}>
                         <FileText className="h-4 w-4" />
-                        <span>Assignments</span>
+                        <span>Exam</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -403,8 +403,8 @@ export default function EducatorDashboard() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Assignment Management</CardTitle>
-                    <CardDescription>Create and manage your assignments</CardDescription>
+                    <CardTitle>Exam Management</CardTitle>
+                    <CardDescription>Create and manage your exams</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
