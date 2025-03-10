@@ -112,7 +112,7 @@ export default function EducatorDashboard() {
             </div>
           </SidebarFooter>
         </Sidebar>
-        <div className="flex-1">
+        <div className="flex-1 ml-75">
           <DashboardHeader>
             <div className="flex items-center">
               <SidebarTrigger className="mr-2" />
