@@ -1,6 +1,4 @@
-"use client";
-
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Upload, X, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
@@ -23,7 +21,21 @@ export function FileUploader({
   const [errors, setErrors] = useState<string[]>([]);
   const [ocrResults, setOcrResults] = useState<string | null>(null); // ✅ Store OCR result
   const [isLoading, setIsLoading] = useState(false); // ✅ Handle loading state
+  const [data, setData] = useState<any[]>([]); // ✅ Store fetched data
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const response = await axios.get("http://localhost:8000/fetch/");
+      setData(response.data.data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -103,6 +115,7 @@ export function FileUploader({
 
       // ✅ Extract OCR text and store it in state
       setOcrResults(response.data.extracted_text);
+      fetchData(); // ✅ Fetch updated data
     } catch (error) {
       console.error("Error uploading files:", error);
       setErrors(["Failed to process the image."]);
@@ -177,6 +190,27 @@ export function FileUploader({
           >
             <h3 className="text-lg font-medium">Extracted Text:</h3>
             <p className="mt-2 text-gray-700">{ocrResults}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ✅ Show fetched data */}
+      <AnimatePresence>
+        {data.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-4 p-4 border rounded-md bg-gray-100"
+          >
+            <h3 className="text-lg font-medium">Stored Data:</h3>
+            {data.map((item, index) => (
+              <div key={index} className="mt-2">
+                <p className="text-gray-700"><strong>ID:</strong> {item.id}</p>
+                <p className="text-gray-700"><strong>Text:</strong> {item.text}</p>
+                <p className="text-gray-700"><strong>Timestamp:</strong> {item.timestamp}</p>
+              </div>
+            ))}
           </motion.div>
         )}
       </AnimatePresence>
