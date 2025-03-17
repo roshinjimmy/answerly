@@ -7,6 +7,7 @@
 /.next/cache
 /venv/Lib
 /backend/venv
+/backend/__pycache__
 /.pnp
 .pnp.*
 .yarn/*
@@ -14,8 +15,8 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
-venv/
-__pycache__/
+
+
 # testing
 /coverage
 
