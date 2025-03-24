@@ -358,14 +358,7 @@ export default function StudentDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Select Assignment</label>
-                        <select className="w-full rounded-md border p-2">
-                          <option>Essay on Modern Literature</option>
-                          <option>Programming Assignment #3</option>
-                          <option>Final Project Proposal</option>
-                        </select>
-                      </div>
+
 
                       <FileUploader
                         onFilesAdded={handleAnswerSheetUpload}
