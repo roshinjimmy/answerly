@@ -5,6 +5,7 @@ import Link from "next/link"
 import { BookOpen, FileText, Home, LogOut, Plus, Settings, Upload, Users } from "lucide-react"
 import { motion } from "framer-motion"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { Input } from "@/components/ui/input"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
@@ -134,7 +135,7 @@ export default function EducatorDashboard() {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
               <TabsList>
                 <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="assignments">Assignments</TabsTrigger>
+                <TabsTrigger value="assignments">Exam</TabsTrigger>
                 <TabsTrigger value="students">Students</TabsTrigger>
                 <TabsTrigger value="settings">Settings</TabsTrigger>
               </TabsList>
@@ -329,13 +330,19 @@ export default function EducatorDashboard() {
               </TabsContent>
 
               <TabsContent value="assignments" className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Card>
-                    <CardHeader>
+                <div className="grid gap-4 md:grid-cols-2 space-y-4">
+                  <Card className="space-y-4">
+                    <CardHeader className="space-y-4" >
                       <CardTitle>Upload Answer Scripts</CardTitle>
-                      <CardDescription>Upload student answer scripts for evaluation</CardDescription>
+                      <CardDescription className="space-y-4">Upload student answer scripts for evaluation</CardDescription>
+                      <div className="space-y-4">
+                        <Input type="text" placeholder="Student Name" className="w-full" />
+                        <Input type="text" placeholder="Class" className="w-full" />
+                        <Input type="text" placeholder="Roll Number" className="w-full" />
+                      </div>
                     </CardHeader>
                     <CardContent>
+                     
                       <FileUploader
                         onFilesAdded={handleAnswerScriptUpload}
                         maxFiles={10}
