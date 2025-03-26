@@ -382,7 +382,7 @@ export default function EducatorDashboard() {
                         onFilesAdded={handleReferenceAnswerUpload}
                         maxFiles={10}
                         maxSize={10485760} // 10MB
-                        accept=".pdf,.doc,.docx,.txt"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                       />
 
                       {uploadedReferenceAnswers.length > 0 && (
@@ -699,4 +699,3 @@ export default function EducatorDashboard() {
     </SidebarProvider>
   )
 }
-

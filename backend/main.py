@@ -8,6 +8,7 @@ from google.cloud import vision
 import json
 import boto3
 from datetime import datetime
+from fastapi import Query
 
 # Initialize FastAPI
 app = FastAPI()
@@ -15,7 +16,7 @@ app = FastAPI()
 # Enable CORS for frontend-backend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Allow frontend requests
+    allow_origins=["http://localhost:3000", "http://localhost:3001"],  # Allow frontend requests
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,8 +56,9 @@ async def upload_file(file: UploadFile = File(...)):
         # Store the results in DynamoDB
         response = table.put_item(
             Item={
-                'id': file.filename,
-                'text': extracted_text,
+                'id': file.filename,  # Unique filename as ID
+                'filename': file.filename,  # Store filename separately
+                'extracted_text': extracted_text,  # Use a more meaningful key
                 'timestamp': datetime.utcnow().isoformat()
             }
         )
@@ -80,3 +82,4 @@ async def fetch_data():
     except Exception as e:
         logging.error(f"Fetching data failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Fetching data failed: {str(e)}")
+    
