@@ -1,13 +1,10 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import io
-from PIL import Image
-import logging
 import os
+import logging
+from sentence_transformers import SentenceTransformer, util
 from google.cloud import vision
 import json
-import boto3
-from datetime import datetime
 
 # Initialize FastAPI
 app = FastAPI()
@@ -27,56 +24,76 @@ os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "./aerial-vehicle-453306-h5-c1c86
 # Initialize Vision API client
 vision_client = vision.ImageAnnotatorClient()
 
-# Initialize DynamoDB client
-dynamodb = boto3.resource('dynamodb', region_name='eu-north-1')
-table = dynamodb.Table('ExtractedText')
+# Load SBERT Model for Semantic Similarity
+model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
-@app.post("/upload/")
-async def upload_file(file: UploadFile = File(...)):
-    """
-    Processes the uploaded file, extracts text using Google Cloud Vision API, and sends it to the frontend.
-    """
+def extract_text_from_image(image_bytes):
+    """Extracts text from an uploaded image using Google Cloud Vision API."""
     try:
-        # Read file into memory
-        image_bytes = await file.read()
-
-        # Convert image to base64 format
         image = vision.Image(content=image_bytes)
-
-        # Perform text detection
         response = vision_client.text_detection(image=image)
         text_annotations = response.text_annotations
+        return text_annotations[0].description if text_annotations else ""
+    except Exception as e:
+        logging.error(f"Text extraction failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Text extraction failed: {str(e)}")
 
-        if not text_annotations:
-            return {"message": "No text detected", "extracted_text": ""}
+@app.post("/evaluate/")
+async def evaluate_answers(reference_file: UploadFile = File(...), answer_file: UploadFile = File(...)):
+    """
+    Evaluates the student's answer against the reference answer using semantic similarity.
+    """
+    try:
+        # Extract text from images
+        reference_text = extract_text_from_image(await reference_file.read())
+        answer_text = extract_text_from_image(await answer_file.read())
 
-        extracted_text = text_annotations[0].description  # Extract detected text
+        if not reference_text or not answer_text:
+            return {"message": "Text extraction failed or no text found"}
 
-        # Store the results in DynamoDB
-        response = table.put_item(
-            Item={
-                'id': file.filename,
-                'text': extracted_text,
-                'timestamp': datetime.utcnow().isoformat()
-            }
-        )
+        # Compute embeddings
+        ref_embedding = model.encode(reference_text, convert_to_tensor=True)
+        ans_embedding = model.encode(answer_text, convert_to_tensor=True)
 
-        return {"message": "OCR completed", "extracted_text": extracted_text}
+        # Compute cosine similarity
+        similarity_score = util.pytorch_cos_sim(ref_embedding, ans_embedding).item()
+
+        # Convert similarity score to marks (assuming 100 is full marks)
+        marks_obtained = round(similarity_score * 100, 2)
+
+        return {
+            "reference_text": reference_text,
+            "answer_text": answer_text,
+            "similarity_score": similarity_score,
+            "marks_obtained": marks_obtained
+        }
 
     except Exception as e:
-        logging.error(f"OCR processing failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"OCR processing failed: {str(e)}")
+        logging.error(f"Evaluation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Evaluation failed: {str(e)}")
+
+@app.post("/api/upload/")
+async def upload_file(file: UploadFile = File(...)):
+    """
+    Endpoint to upload a file and return its extracted text.
+    """
+    try:
+        # Extract text from the uploaded file
+        file_content = await file.read()
+        extracted_text = extract_text_from_image(file_content)
+
+        if not extracted_text:
+            return {"message": "No text found in the uploaded file"}
+
+        return {"extracted_text": extracted_text}
+
+    except Exception as e:
+        logging.error(f"File upload failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
 
 @app.get("/fetch/")
 async def fetch_data():
     """
-    Fetches the data from DynamoDB and returns it.
+    A simple endpoint to test connectivity.
     """
-    try:
-        response = table.scan()
-        items = response.get('Items', [])
-        return {"data": items}
-
-    except Exception as e:
-        logging.error(f"Fetching data failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Fetching data failed: {str(e)}")
+    return {"message": "Fetch endpoint is working!"}

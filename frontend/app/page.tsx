@@ -5,9 +5,9 @@ import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="border-b">
-        <div className="container flex h-16 items-center px-4 sm:px-8">
+    <div className="flex min-h-screen flex-col items-center"> {/* Added items-center */}
+      <header className="border-b w-full mb-4"> {/* Added w-full */}
+        <div className="container flex h-16 items-center px-4 sm:px-8 mx-auto"> {/* Added mx-auto */}
           <h1 className="text-xl font-bold">EduEval AI</h1>
           <div className="ml-auto flex items-center gap-4">
             <ThemeToggle />
@@ -22,9 +22,9 @@ export default function Home() {
           </div>
         </div>
       </header>
-      <main className="flex-1">
-        <section className="container grid items-center gap-6 pb-8 pt-6 md:py-10">
-          <div className="flex max-w-[980px] flex-col items-center gap-2">
+      <main className="flex-1 w-full m-4"> {/* Added w-full */}
+        <section className="container grid items-center gap-6 pb-8 pt-6 md:py-10 text-center mx-auto"> {/* Added mx-auto */}
+          <div className="flex max-w-[980px] flex-col items-center gap-2 mx-auto">
             <h1 className="text-center text-3xl font-extrabold leading-tight tracking-tighter md:text-4xl lg:text-5xl">
               AI-Powered Answer Evaluation <br className="hidden sm:inline" />
               for Modern Education
@@ -33,7 +33,7 @@ export default function Home() {
               Streamline grading, provide instant feedback, and ensure fair evaluations with our advanced AI platform.
             </p>
           </div>
-          <div className="flex justify-center gap-4">
+          <div className="flex justify-center gap-4 mt-4">
             <Button asChild size="lg" className="group">
               <Link href="/dashboard/educator">
                 <BookOpen className="mr-2 h-4 w-4 transition-transform group-hover:scale-110" />
@@ -107,8 +107,8 @@ export default function Home() {
           </div>
         </section>
       </main>
-      <footer className="border-t py-6">
-        <div className="container flex flex-col items-center justify-between gap-4 md:flex-row">
+      <footer className="border-t py-6 mt-4 w-full"> {/* Added w-full */}
+        <div className="container flex flex-col items-center justify-between gap-4 md:flex-row mx-auto"> {/* Added mx-auto */}
           <p className="text-center text-sm text-muted-foreground">
             &copy; {new Date().getFullYear()} EduEval AI. All rights reserved.
           </p>

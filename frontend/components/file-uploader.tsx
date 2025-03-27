@@ -107,7 +107,7 @@ export function FileUploader({
     setOcrResults(null); // Reset previous results
 
     try {
-      const response = await axios.post("http://localhost:8000/upload/", formData, {
+      const response = await axios.post("http://localhost:8000/api/upload/", formData, { // ✅ Updated endpoint
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -196,7 +196,7 @@ export function FileUploader({
 
       {/* ✅ Show fetched data */}
       <AnimatePresence>
-        {data.length > 0 && (
+        {(data?.length ?? 0) > 0 && ( // ✅ Safely handle undefined or null data
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
