@@ -5,6 +5,7 @@
 /frontend/.next
 /frontend/.next/cache/webpack
 /.next/cache
+/backend/myenv
 /venv/Lib
 /backend/venv
 /.pnp
