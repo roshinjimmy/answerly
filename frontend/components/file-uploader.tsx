@@ -107,7 +107,7 @@ export function FileUploader({
     setOcrResults(null); // Reset previous results
 
     try {
-      const response = await axios.post("http://localhost:8000/upload/", formData, {
+      const response = await axios.post("http://localhost:8000/api/upload/", formData, { // ✅ Updated endpoint
         headers: {
           "Content-Type": "multipart/form-data",
         },

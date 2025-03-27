@@ -6,6 +6,7 @@ import { BookOpen, FileText, Home, LogOut, Plus, Settings, Upload, Users } from 
 import { motion } from "framer-motion"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Input } from "@/components/ui/input"
+import axios from "axios"; // Import axios for API calls
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
@@ -35,6 +36,7 @@ export default function EducatorDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
   const [uploadedAnswerScripts, setUploadedAnswerScripts] = useState<string[]>([])
   const [uploadedReferenceAnswers, setUploadedReferenceAnswers] = useState<string[]>([])
+  const [evaluationResults, setEvaluationResults] = useState<string | null>(null);
 
   const handleAnswerScriptUpload = (files: File[]) => {
     const newFiles = files.map((file) => file.name)
@@ -45,6 +47,29 @@ export default function EducatorDashboard() {
     const newFiles = files.map((file) => file.name)
     setUploadedReferenceAnswers((prev) => [...prev, ...newFiles])
   }
+
+  const handleEvaluateScripts = async () => {
+    try {
+      const response = await axios.post("/api/evaluate", {
+        answerScripts: uploadedAnswerScripts,
+        referenceAnswers: uploadedReferenceAnswers,
+      });
+      setEvaluationResults(JSON.stringify(response.data.results, null, 2));
+    } catch (error) {
+      console.error("Error evaluating scripts:", error);
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 404) {
+          setEvaluationResults("API endpoint not found. Please contact support.");
+        } else if (error.response?.status === 400) {
+          setEvaluationResults("Invalid data sent to the server. Please check your inputs.");
+        } else {
+          setEvaluationResults("Failed to evaluate scripts. Please try again.");
+        }
+      } else {
+        setEvaluationResults("An unexpected error occurred. Please try again.");
+      }
+    }
+  };
 
   return (
     <SidebarProvider>
@@ -132,7 +157,11 @@ export default function EducatorDashboard() {
             </div>
           </DashboardHeader>
           <DashboardShell>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <Tabs
+              value={activeTab}
+              onValueChange={(value) => setActiveTab(value)} // Ensure state updates correctly
+              className="space-y-4"
+            >
               <TabsList>
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="assignments">Exam</TabsTrigger>
@@ -382,7 +411,7 @@ export default function EducatorDashboard() {
                         onFilesAdded={handleReferenceAnswerUpload}
                         maxFiles={10}
                         maxSize={10485760} // 10MB
-                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.jpg"
                       />
 
                       {uploadedReferenceAnswers.length > 0 && (
@@ -407,78 +436,34 @@ export default function EducatorDashboard() {
                     </CardFooter>
                   </Card>
                 </div>
-
                 <Card>
                   <CardHeader>
-                    <CardTitle>Exam Management</CardTitle>
-                    <CardDescription>Create and manage your exams</CardDescription>
+                    <CardTitle>Evaluate Answer Scripts</CardTitle>
+                    <CardDescription>
+                      Perform semantic analysis and calculate scores.
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      <div className="rounded-md border">
-                        <div className="grid grid-cols-5 gap-4 p-4 font-medium">
-                          <div>Assignment</div>
-                          <div>Due Date</div>
-                          <div>Submissions</div>
-                          <div>Evaluation Status</div>
-                          <div>Actions</div>
-                        </div>
-                        <div className="divide-y">
-                          {[
-                            { name: "Midterm Exam", date: "Mar 15, 2025", submissions: "145/145", status: "Completed" },
-                            {
-                              name: "Essay on Modern Literature",
-                              date: "Mar 20, 2025",
-                              submissions: "132/145",
-                              status: "In Progress",
-                            },
-                            {
-                              name: "Programming Assignment #3",
-                              date: "Mar 25, 2025",
-                              submissions: "128/145",
-                              status: "In Progress",
-                            },
-                            {
-                              name: "Final Project Proposal",
-                              date: "Apr 5, 2025",
-                              submissions: "98/145",
-                              status: "Not Started",
-                            },
-                          ].map((assignment, i) => (
-                            <div key={i} className="grid grid-cols-5 gap-4 p-4">
-                              <div className="font-medium">{assignment.name}</div>
-                              <div>{assignment.date}</div>
-                              <div>{assignment.submissions}</div>
-                              <div>
-                                <Badge
-                                  variant={
-                                    assignment.status === "Completed"
-                                      ? "success"
-                                      : assignment.status === "In Progress"
-                                        ? "warning"
-                                        : "secondary"
-                                  }
-                                >
-                                  {assignment.status}
-                                </Badge>
-                              </div>
-                              <div>
-                                <Button variant="ghost" size="sm">
-                                  View
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
+                    <Button
+                      className="w-full"
+                      onClick={handleEvaluateScripts}
+                      disabled={
+                        uploadedAnswerScripts.length === 0 ||
+                        uploadedReferenceAnswers.length === 0
+                      }
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      Evaluate Scripts
+                    </Button>
+                    {evaluationResults && (
+                      <div className="mt-4">
+                        <h4 className="text-sm font-medium">Evaluation Results:</h4>
+                        <div className="mt-2 rounded-md border p-2">
+                          <pre className="text-sm">{evaluationResults}</pre>
                         </div>
                       </div>
-                    </div>
+                    )}
                   </CardContent>
-                  <CardFooter>
-                    <Button>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create New Assignment
-                    </Button>
-                  </CardFooter>
                 </Card>
               </TabsContent>
 
