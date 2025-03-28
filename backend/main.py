@@ -97,3 +97,10 @@ async def fetch_data():
     A simple endpoint to test connectivity.
     """
     return {"message": "Fetch endpoint is working!"}
+
+
+# Add this import at the top with your other imports
+from auth_routes import router as auth_router
+
+# Add this line after initializing your FastAPI app
+app.include_router(auth_router)

@@ -1,15 +1,18 @@
 "use client"
 
+import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { BookOpen, Eye, EyeOff, Lock, Mail } from 'lucide-react'
+import { BookOpen, Eye, EyeOff, Lock, Mail } from "lucide-react"
 import { motion } from "framer-motion"
+import axios from "axios"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function LoginPage() {
@@ -19,15 +22,20 @@ export default function LoginPage() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
+    role: "student", // Default role
   })
   const [errors, setErrors] = useState({
     email: "",
     password: "",
   })
+  const [serverError, setServerError] = useState("")
 
   const validateForm = () => {
     let isValid = true
-    const newErrors = { email: "", password: "" }
+    const newErrors = {
+      email: "",
+      password: "",
+    }
 
     if (!formData.email) {
       newErrors.email = "Email is required"
@@ -39,9 +47,6 @@ export default function LoginPage() {
 
     if (!formData.password) {
       newErrors.password = "Password is required"
-      isValid = false
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters"
       isValid = false
     }
 
@@ -57,24 +62,48 @@ export default function LoginPage() {
     }))
   }
 
+  const handleRoleChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      role: value,
+    }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setServerError("")
     
     if (!validateForm()) return
     
     setIsLoading(true)
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false)
-      
-      // Redirect based on role (for demo purposes)
-      if (formData.email.includes("educator")) {
-        router.push("/dashboard/educator")
+    try {
+      // Include role in the login request
+      const response = await axios.post('http://localhost:8000/api/login', {
+        email: formData.email,
+        password: formData.password,
+        role: formData.role
+      });
+
+      if (response.data.success) {
+        // Store user data in localStorage or state management
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        
+        // Redirect based on role
+        if (response.data.user.role === "educator") {
+          router.push("/dashboard/educator");
+        } else {
+          router.push("/dashboard/student");
+        }
       } else {
-        router.push("/dashboard/student")
+        setServerError(response.data.message || "Login failed");
       }
-    }, 1500)
+    } catch (error: any) {
+      console.error("Login error:", error);
+      setServerError(error.response?.data?.message || "Invalid email or password");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -90,7 +119,7 @@ export default function LoginPage() {
           </div>
         </div>
       </header>
-      
+
       <main className="flex flex-1 items-center justify-center p-4 md:p-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -101,11 +130,14 @@ export default function LoginPage() {
           <Card className="border-2">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold">Sign in</CardTitle>
-              <CardDescription>
-                Enter your credentials to access your account
-              </CardDescription>
+              <CardDescription>Enter your email and password to sign in to your account</CardDescription>
             </CardHeader>
             <CardContent>
+              {serverError && (
+                <div className="mb-4 p-3 text-sm text-white bg-destructive rounded">
+                  {serverError}
+                </div>
+              )}
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
@@ -116,21 +148,19 @@ export default function LoginPage() {
                       name="email"
                       type="email"
                       placeholder="name@example.com"
-                      className={`pl-10 ${errors.email ? 'border-destructive' : ''}`}
+                      className={`pl-10 ${errors.email ? "border-destructive" : ""}`}
                       value={formData.email}
                       onChange={handleChange}
                       disabled={isLoading}
                     />
                   </div>
-                  {errors.email && (
-                    <p className="text-sm text-destructive">{errors.email}</p>
-                  )}
+                  {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                 </div>
-                
+
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password">Password</Label>
-                    <Link href="#" className="text-xs text-primary hover:underline">
+                    <Link href="/forgot-password" className="text-sm text-primary hover:underline">
                       Forgot password?
                     </Link>
                   </div>
@@ -141,7 +171,7 @@ export default function LoginPage() {
                       name="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
-                      className={`pl-10 ${errors.password ? 'border-destructive' : ''}`}
+                      className={`pl-10 ${errors.password ? "border-destructive" : ""}`}
                       value={formData.password}
                       onChange={handleChange}
                       disabled={isLoading}
@@ -152,40 +182,43 @@ export default function LoginPage() {
                       className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
                       tabIndex={-1}
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                      <span className="sr-only">
-                        {showPassword ? "Hide password" : "Show password"}
-                      </span>
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
                     </button>
                   </div>
-                  {errors.password && (
-                    <p className="text-sm text-destructive">{errors.password}</p>
-                  )}
+                  {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                 </div>
-                
+
+                {/* Add role selection */}
+                <div className="space-y-2">
+                  <Label>Account Type</Label>
+                  <RadioGroup
+                    value={formData.role}
+                    onValueChange={handleRoleChange}
+                    className="flex flex-col space-y-1"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="student" id="student-login" />
+                      <Label htmlFor="student-login" className="cursor-pointer">
+                        Student
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="educator" id="educator-login" />
+                      <Label htmlFor="educator-login" className="cursor-pointer">
+                        Educator
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Signing in..." : "Sign in"}
                 </Button>
-                
-                <div className="text-center text-sm">
-                  <p>
-                    Demo credentials:
-                  </p>
-                  <p className="text-muted-foreground">
-                    Educator: educator@example.com / password
-                  </p>
-                  <p className="text-muted-foreground">
-                    Student: student@example.com / password
-                  </p>
-                </div>
               </form>
             </CardContent>
-            <CardFooter className="flex flex-col space-y-4">
-              <div className="text-center text-sm">
+            <CardFooter>
+              <div className="text-center w-full text-sm">
                 Don&apos;t have an account?{" "}
                 <Link href="/register" className="text-primary hover:underline">
                   Sign up
