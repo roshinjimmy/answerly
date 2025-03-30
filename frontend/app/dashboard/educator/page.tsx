@@ -6,8 +6,7 @@ import { BookOpen, FileText, Home, LogOut, Plus, Settings, Upload, Users } from 
 import { motion } from "framer-motion"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Input } from "@/components/ui/input"
-import axios from "axios"; // Import axios for API calls
-
+import axios from "axios";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -40,6 +39,7 @@ export default function EducatorDashboard() {
   const [uploadedAnswerFiles, setUploadedAnswerFiles] = useState<File[]>([]);
   const [uploadedReferenceFiles, setUploadedReferenceFiles] = useState<File[]>([]);
   const [isEvaluating, setIsEvaluating] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<"sbert" | "gemini">("sbert"); // Default to SBERT
 
   const handleAnswerScriptUpload = (files: File[]) => {
     const newFiles = files.map((file) => file.name);
@@ -53,73 +53,56 @@ export default function EducatorDashboard() {
     setUploadedReferenceFiles((prev) => [...prev, ...files]);
   }
 
+
   const handleEvaluateScripts = async () => {
     try {
       setIsEvaluating(true);
-      
-      // First try to use the backend API directly
+
       if (uploadedAnswerFiles.length > 0 && uploadedReferenceFiles.length > 0) {
         try {
-          // Create form data for file upload
           const formData = new FormData();
-          formData.append('reference_file', uploadedReferenceFiles[0]);
-          formData.append('answer_file', uploadedAnswerFiles[0]);
-          
-          // Call the backend API directly
+          formData.append("reference_file", uploadedReferenceFiles[0]);
+          formData.append("answer_file", uploadedAnswerFiles[0]);
+          formData.append("model", selectedModel); // Send the selected model
+
           const backendResponse = await axios.post(
-            "http://localhost:8000/evaluate/", 
+            "http://localhost:8000/evaluate/",
             formData,
-            {
-              headers: {
-                'Content-Type': 'multipart/form-data',
-              },
-            }
+            { headers: { "Content-Type": "multipart/form-data" } }
           );
-          
-          // Format the response from the backend - only include essential information
+
           const result = {
             projectName: "AIEVAL",
             fileName: uploadedAnswerFiles[0].name,
             similarity_score: backendResponse.data.similarity_score,
             marks_obtained: backendResponse.data.marks_obtained,
-            source: "Backend AI Evaluation"
+            model_used: selectedModel.toUpperCase(),
+            source: "Backend AI Evaluation",
           };
-          
+
           setEvaluationResults(JSON.stringify(result, null, 2));
           setIsEvaluating(false);
           return;
         } catch (backendError) {
           console.error("Backend evaluation failed:", backendError);
-          // If backend fails, fall back to the Next.js API route
         }
       }
-      
-      // Fallback to the Next.js API route
+
       const response = await axios.post("/api/evaluate", {
         answerScripts: uploadedAnswerScripts,
         referenceAnswers: uploadedReferenceAnswers,
+        model: selectedModel,
       });
-      
+
       setEvaluationResults(JSON.stringify(response.data.results, null, 2));
     } catch (error) {
-      // Error handling remains the same
-      // ...
       console.error("Error evaluating scripts:", error);
-      if (axios.isAxiosError(error)) {
-        if (error.response?.status === 404) {
-          setEvaluationResults("API endpoint not found. Please contact support.");
-        } else if (error.response?.status === 400) {
-          setEvaluationResults("Invalid data sent to the server. Please check your inputs.");
-        } else {
-          setEvaluationResults("Failed to evaluate scripts. Please try again.");
-        }
-      } else {
-        setEvaluationResults("An unexpected error occurred. Please try again.");
-      }
+      setEvaluationResults("An unexpected error occurred. Please try again.");
     } finally {
       setIsEvaluating(false);
     }
   };
+
 
   return (
     <SidebarProvider>
@@ -409,6 +392,22 @@ export default function EducatorDashboard() {
               </TabsContent>
 
               <TabsContent value="assignments" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>AI Model Selection</CardTitle>
+                    <CardDescription>Select the AI model for similarity evaluation.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <select
+                      value={selectedModel}
+                      onChange={(e) => setSelectedModel(e.target.value as "sbert" | "gemini")}
+                      className="w-full p-2 border rounded-md"
+                    >
+                      <option value="sbert">SBERT</option>
+                      <option value="gemini">Gemini</option>
+                    </select>
+                  </CardContent>
+                </Card>
                 <div className="grid gap-4 md:grid-cols-2 space-y-4">
                   <Card className="space-y-4">
                     <CardHeader className="space-y-4" >
@@ -421,7 +420,7 @@ export default function EducatorDashboard() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                     
+
                       <FileUploader
                         onFilesAdded={handleAnswerScriptUpload}
                         maxFiles={10}
