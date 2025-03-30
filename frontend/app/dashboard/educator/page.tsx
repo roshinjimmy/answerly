@@ -43,6 +43,7 @@ export default function EducatorDashboard() {
   const [studentName, setStudentName] = useState<string>("");
   const [studentClass, setStudentClass] = useState<string>("");
   const [studentRollNo, setStudentRollNo] = useState<string>("");
+  const [processedText, setProcessedText] = useState<string | null>(null); // Add state for processed text
 
   const handleAnswerScriptUpload = (files: File[]) => {
     if (files.length === 0) {
@@ -64,11 +65,23 @@ export default function EducatorDashboard() {
     setUploadedReferenceFiles((prev) => [...prev, ...files]);
   };
 
-  const handleProcessAnswerScripts = () => {
+  const handleProcessAnswerScripts = async () => {
     if (uploadedAnswerFiles.length > 0) {
       console.log("Processing Answer Scripts:", uploadedAnswerFiles);
-      // Simulate processing logic
-      alert("Answer scripts processed successfully!");
+
+      try {
+        const formData = new FormData();
+        formData.append("file", uploadedAnswerFiles[0]); // Process the first file
+
+        const response = await axios.post("http://localhost:8000/api/upload/", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+
+        setProcessedText(response.data.extracted_text); // Set the processed text
+      } catch (error) {
+        console.error("Error processing answer scripts:", error);
+        alert("Failed to process the answer scripts. Please try again.");
+      }
     } else {
       console.warn("No answer scripts to process.");
       alert("Please upload answer scripts before processing.");
@@ -489,6 +502,12 @@ export default function EducatorDashboard() {
                         Process Answer Scripts
                       </Button>
                     </CardFooter>
+                    {processedText && (
+                      <div className="mt-4 p-4 border rounded-md bg-gray-100">
+                        <h3 className="text-lg font-medium">Processed Text:</h3>
+                        <p className="mt-2 text-gray-700">{processedText}</p>
+                      </div>
+                    )}
                   </Card>
 
                   <Card>
