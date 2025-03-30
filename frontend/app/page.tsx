@@ -5,18 +5,21 @@ import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen flex-col items-center"> {/* Added items-center */}
+    <div className="flex flex-col min-h-screen"> {/* Added min-h-screen */}
       <header className="border-b w-full mb-4"> {/* Added w-full */}
         <div className="container flex h-16 items-center px-4 sm:px-8 mx-auto"> {/* Added mx-auto */}
           <h1 className="text-xl font-bold">EduEval AI</h1>
           <div className="ml-auto flex items-center gap-4">
             <ThemeToggle />
             <nav className="flex gap-4">
-              <Link href="/login" className="text-sm font-medium hover:underline">
+              <Link href="/login" className="text-sm font-medium">
                 Login
               </Link>
-              <Link href="/register" className="text-sm font-medium hover:underline">
+              <Link href="/register" className="text-sm font-medium">
                 Register
+              </Link>
+              <Link href="/help" className="text-sm font-medium">
+                Help
               </Link>
             </nav>
           </div>
@@ -107,16 +110,16 @@ export default function Home() {
           </div>
         </section>
       </main>
-      <footer className="border-t py-6 mt-4 w-full"> {/* Added w-full */}
+      <footer className="border-t py-6 mt-auto w-full"> {/* Added w-full */}
         <div className="container flex flex-col items-center justify-between gap-4 md:flex-row mx-auto"> {/* Added mx-auto */}
           <p className="text-center text-sm text-muted-foreground">
             &copy; {new Date().getFullYear()} EduEval AI. All rights reserved.
           </p>
           <div className="flex gap-4">
-            <Link href="/terms" className="text-sm text-muted-foreground hover:underline">
+            <Link href="/terms" className="text-sm text-muted-foreground">
               Terms
             </Link>
-            <Link href="/privacy" className="text-sm text-muted-foreground hover:underline">
+            <Link href="/privacy" className="text-sm text-muted-foreground">
               Privacy
             </Link>
           </div>
