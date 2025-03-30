@@ -7,6 +7,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { BookOpen, Eye, EyeOff, Lock, Mail, User } from "lucide-react"
 import { motion } from "framer-motion"
+import axios from "axios"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -32,7 +33,9 @@ function RegisterPage() {
     password: "",
     confirmPassword: "",
   })
+  const [serverError, setServerError] = useState("")
 
+  // Validation logic remains the same
   const validateForm = () => {
     let isValid = true
     const newErrors = {
@@ -89,23 +92,40 @@ function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setServerError("")
 
     if (!validateForm()) return
 
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false)
+    try {
+      // Replace the timeout with actual API call to your backend
+      const response = await axios.post('http://localhost:8000/api/register', {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role
+      });
 
-      // Redirect to login page after successful registration
-      router.push("/login")
-    }, 1500)
+      if (response.data.success) {
+        // Redirect to login page after successful registration
+        router.push("/login");
+      } else {
+        setServerError(response.data.message || "Registration failed");
+      }
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      setServerError(error.response?.data?.message || "Failed to register. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
+  // UI remains mostly the same
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b">
+        {/* Header content remains the same */}
         <div className="container flex h-16 items-center px-4 sm:px-8">
           <Link href="/" className="flex items-center gap-2">
             <BookOpen className="h-6 w-6" />
@@ -130,7 +150,13 @@ function RegisterPage() {
               <CardDescription>Enter your information to create an account</CardDescription>
             </CardHeader>
             <CardContent>
+              {serverError && (
+                <div className="mb-4 p-3 text-sm text-white bg-destructive rounded">
+                  {serverError}
+                </div>
+              )}
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Form fields remain the same */}
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name</Label>
                   <div className="relative">
@@ -148,6 +174,7 @@ function RegisterPage() {
                   {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
                 </div>
 
+                {/* Other form fields remain the same */}
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <div className="relative">

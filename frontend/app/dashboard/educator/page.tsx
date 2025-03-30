@@ -37,25 +37,73 @@ export default function EducatorDashboard() {
   const [uploadedAnswerScripts, setUploadedAnswerScripts] = useState<string[]>([])
   const [uploadedReferenceAnswers, setUploadedReferenceAnswers] = useState<string[]>([])
   const [evaluationResults, setEvaluationResults] = useState<string | null>(null);
+  const [uploadedAnswerFiles, setUploadedAnswerFiles] = useState<File[]>([]);
+  const [uploadedReferenceFiles, setUploadedReferenceFiles] = useState<File[]>([]);
+  const [isEvaluating, setIsEvaluating] = useState(false);
 
   const handleAnswerScriptUpload = (files: File[]) => {
-    const newFiles = files.map((file) => file.name)
-    setUploadedAnswerScripts((prev) => [...prev, ...newFiles])
+    const newFiles = files.map((file) => file.name);
+    setUploadedAnswerScripts((prev) => [...prev, ...newFiles]);
+    setUploadedAnswerFiles((prev) => [...prev, ...files]);
   }
 
   const handleReferenceAnswerUpload = (files: File[]) => {
-    const newFiles = files.map((file) => file.name)
-    setUploadedReferenceAnswers((prev) => [...prev, ...newFiles])
+    const newFiles = files.map((file) => file.name);
+    setUploadedReferenceAnswers((prev) => [...prev, ...newFiles]);
+    setUploadedReferenceFiles((prev) => [...prev, ...files]);
   }
 
   const handleEvaluateScripts = async () => {
     try {
+      setIsEvaluating(true);
+      
+      // First try to use the backend API directly
+      if (uploadedAnswerFiles.length > 0 && uploadedReferenceFiles.length > 0) {
+        try {
+          // Create form data for file upload
+          const formData = new FormData();
+          formData.append('reference_file', uploadedReferenceFiles[0]);
+          formData.append('answer_file', uploadedAnswerFiles[0]);
+          
+          // Call the backend API directly
+          const backendResponse = await axios.post(
+            "http://localhost:8000/evaluate/", 
+            formData,
+            {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            }
+          );
+          
+          // Format the response from the backend - only include essential information
+          const result = {
+            projectName: "AIEVAL",
+            fileName: uploadedAnswerFiles[0].name,
+            similarity_score: backendResponse.data.similarity_score,
+            marks_obtained: backendResponse.data.marks_obtained,
+            source: "Backend AI Evaluation"
+          };
+          
+          setEvaluationResults(JSON.stringify(result, null, 2));
+          setIsEvaluating(false);
+          return;
+        } catch (backendError) {
+          console.error("Backend evaluation failed:", backendError);
+          // If backend fails, fall back to the Next.js API route
+        }
+      }
+      
+      // Fallback to the Next.js API route
       const response = await axios.post("/api/evaluate", {
         answerScripts: uploadedAnswerScripts,
         referenceAnswers: uploadedReferenceAnswers,
       });
+      
       setEvaluationResults(JSON.stringify(response.data.results, null, 2));
     } catch (error) {
+      // Error handling remains the same
+      // ...
       console.error("Error evaluating scripts:", error);
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 404) {
@@ -68,6 +116,8 @@ export default function EducatorDashboard() {
       } else {
         setEvaluationResults("An unexpected error occurred. Please try again.");
       }
+    } finally {
+      setIsEvaluating(false);
     }
   };
 
