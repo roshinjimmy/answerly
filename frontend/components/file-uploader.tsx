@@ -79,12 +79,11 @@ export function FileUploader({
     return validFiles;
   };
 
-  const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const validFiles = validateFiles(e.target.files);
     if (validFiles.length > 0) {
       setFiles(validFiles);
       onFilesAdded(validFiles);
-      await uploadFiles(validFiles);
     }
 
     if (fileInputRef.current) {
@@ -95,32 +94,6 @@ export function FileUploader({
   const handleButtonClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
-    }
-  };
-
-  const uploadFiles = async (files: File[]) => {
-    const formData = new FormData();
-    formData.append("file", files[0]); // Only processing one file at a time
-
-    setIsLoading(true);
-    setErrors([]);
-    setOcrResults(null); // Reset previous results
-
-    try {
-      const response = await axios.post("http://localhost:8000/api/upload/", formData, { // ✅ Updated endpoint
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      // ✅ Extract OCR text and store it in state
-      setOcrResults(response.data.extracted_text);
-      fetchData(); // ✅ Fetch updated data
-    } catch (error) {
-      console.error("Error uploading files:", error);
-      setErrors(["Failed to process the image."]);
-    } finally {
-      setIsLoading(false);
     }
   };
 
