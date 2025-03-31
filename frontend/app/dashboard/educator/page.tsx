@@ -713,12 +713,24 @@ export default function EducatorDashboard() {
                             </div>
                           </div>
                         )}
+                        
+                       
+                      </div>
+                    </CardContent>
+                    <CardFooter>
+                      <div className="flex flex-col space-y-4 w-full">
+                        <Button className="w-full" onClick={handleProcessAnswerScripts}>
+                          <Upload className="mr-2 h-4 w-4" />
+                          Process Answer Sheet
+                        </Button>
+
                         {processedAnswerText && (
                           <div className="mt-4 p-4 border rounded-md bg-black text-white">
                             <h3 className="text-lg font-medium">Processed Answer Text:</h3>
                             <p className="mt-2">{processedAnswerText}</p>
                           </div>
                         )}
+
                         {evaluationResults && (
                           <div className="mt-4 p-4 border rounded-md bg-black text-white">
                             <h3 className="text-lg font-medium">Evaluation Results:</h3>
@@ -734,14 +746,7 @@ export default function EducatorDashboard() {
                             </div>
                           </div>
                         )}
-                      </div>
-                    </CardContent>
-                    <CardFooter>
-                      <div className="flex flex-col space-y-4">
-                        <Button className="w-full" onClick={handleProcessAnswerScripts}>
-                          <Upload className="mr-2 h-4 w-4" />
-                          Process Answer Sheet
-                        </Button>
+
                         <Button
                           className="w-full"
                           onClick={handleEvaluateScripts}
@@ -750,11 +755,9 @@ export default function EducatorDashboard() {
                           <Upload className="mr-2 h-4 w-4" />
                           Evaluate Answer Sheet
                         </Button>
+
                         <div className="flex justify-between w-full mt-4">
-                          <Button
-                            onClick={handlePreviousStudent}
-                            disabled={currentStudentIndex === 0}
-                          >
+                          <Button onClick={handlePreviousStudent} disabled={currentStudentIndex === 0}>
                             Previous Student
                           </Button>
                           <Button
@@ -825,10 +828,10 @@ export default function EducatorDashboard() {
                                   student.performance === "Excellent"
                                     ? "success"
                                     : student.performance === "Good"
-                                    ? "default"
-                                    : student.performance === "Average"
-                                    ? "secondary"
-                                    : "destructive"
+                                      ? "default"
+                                      : student.performance === "Average"
+                                        ? "secondary"
+                                        : "destructive"
                                 }
                               >
                                 {student.performance}
