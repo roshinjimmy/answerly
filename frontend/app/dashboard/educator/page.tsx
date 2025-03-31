@@ -49,6 +49,16 @@ export default function EducatorDashboard() {
   const [fileUploaderKey, setFileUploaderKey] = useState(0); // State to force re-render of FileUploader
   const [marksList, setMarksList] = useState<{ name: string; class: string; roll_no: string; marks: number }[]>([]);
   const [showMarksList, setShowMarksList] = useState(false); // State to toggle marks list display
+  const [examName, setExamName] = useState<string | null>(null); // State for exam name
+  const [isExamSetupComplete, setIsExamSetupComplete] = useState(false); // State to track if initial setup is complete
+
+  const handleExamSetupComplete = () => {
+    if (examName && students.length > 0 && processedReferenceText) {
+      setIsExamSetupComplete(true);
+    } else {
+      alert("Please provide the exam name, upload student details, and process the reference answer.");
+    }
+  };
 
   const handleAnswerScriptUpload = (files: File[]) => {
     if (files.length === 0) {
@@ -149,8 +159,13 @@ export default function EducatorDashboard() {
   };
 
   const handleEvaluateScripts = async () => {
-    if (uploadedAnswerFiles.length === 0 || uploadedReferenceFiles.length === 0) {
-      alert("Please upload both answer scripts and reference answers before evaluation.");
+    if (uploadedAnswerFiles.length === 0) {
+      alert("Please upload the answer sheet for the current student before evaluation.");
+      return;
+    }
+
+    if (!uploadedReferenceFiles.length) {
+      alert("Reference answer is missing. Please ensure the reference answer is uploaded and processed.");
       return;
     }
 
@@ -159,8 +174,8 @@ export default function EducatorDashboard() {
       console.log("Evaluating scripts...");
 
       const formData = new FormData();
-      formData.append("reference_file", uploadedReferenceFiles[0]);
-      formData.append("answer_file", uploadedAnswerFiles[0]);
+      formData.append("reference_file", uploadedReferenceFiles[0]); // Use the same reference key for all students
+      formData.append("answer_file", uploadedAnswerFiles[0]); // Use the current student's answer sheet
       formData.append("model", selectedModel);
 
       console.log("Sending request to evaluate scripts...");
@@ -226,7 +241,7 @@ export default function EducatorDashboard() {
       resetUploadAndEvaluationSections();
       setCurrentStudentIndex((prevIndex) => prevIndex + 1);
     } else {
-      alert("No more students to process.");
+      handleFinishEvaluation(); // Call finish evaluation when the last student is reached
     }
   };
 
@@ -254,7 +269,7 @@ export default function EducatorDashboard() {
     });
 
     resetUploadAndEvaluationSections(); // Reset upload and evaluation sections
-    setActiveTab("students"); // Navigate to the "students" tab
+    setActiveTab("students"); // Navigate to the "Students" tab
   };
 
   const handleDownloadMarksList = () => {
@@ -271,13 +286,11 @@ export default function EducatorDashboard() {
 
   const resetUploadAndEvaluationSections = () => {
     setUploadedAnswerScripts([]);
-    setUploadedReferenceAnswers([]);
     setUploadedAnswerFiles([]);
-    setUploadedReferenceFiles([]);
     setProcessedAnswerText(null);
-    setProcessedReferenceText(null);
     setEvaluationResults(null);
     setFileUploaderKey((prevKey) => prevKey + 1); // Reset FileUploader by updating its key
+    // Retain uploadedReferenceAnswers and uploadedReferenceFiles to use the same reference key for all students
   };
 
   const currentStudent = students[currentStudentIndex] || { name: "", class: "", roll_no: "" };
@@ -570,241 +583,190 @@ export default function EducatorDashboard() {
               </TabsContent>
 
               <TabsContent value="assignments" className="space-y-4">
-                <Card className="space-y-4">
-                  <CardHeader className="space-y-4">
-                    <CardTitle>Upload Answer Scripts</CardTitle>
-                    <CardDescription className="space-y-4">Upload student answer scripts for evaluation</CardDescription>
-                    <div className="space-y-4">
-                      <Input
-                        type="file"
-                        accept=".xlsx, .xls"
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            handleExcelUpload(e.target.files[0]);
-                          }
-                        }}
-                        className="w-full"
-                      />
-                      <p className="text-sm text-muted-foreground">
-                        Upload an Excel file containing student details (columns: Name, Class, Roll Number).
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Current Student:</p>
-                      <div className="p-4 border rounded-md bg-black text-white">
-                        <p className="text-sm">
-                          <strong>Name:</strong> {currentStudent.name || "N/A"}
-                        </p>
-                        <p className="text-sm">
-                          <strong>Class:</strong> {currentStudent.class || "N/A"}
-                        </p>
-                        <p className="text-sm">
-                          <strong>Roll Number:</strong> {currentStudent.roll_no || "N/A"}
+                {!isExamSetupComplete ? (
+                  <Card className="space-y-4">
+                    <CardHeader>
+                      <CardTitle>Exam Setup</CardTitle>
+                      <CardDescription>Provide the exam name, upload student details, and reference answer.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Exam Name</label>
+                        <Input
+                          type="text"
+                          placeholder="Enter exam name"
+                          value={examName || ""}
+                          onChange={(e) => setExamName(e.target.value)}
+                          className="w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Upload Student Details</label>
+                        <Input
+                          type="file"
+                          accept=".xlsx, .xls"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              handleExcelUpload(e.target.files[0]);
+                            }
+                          }}
+                          className="w-full"
+                        />
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Upload an Excel file containing student details (columns: Name, Class, Roll Number).
                         </p>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className={`relative ${uploadedAnswerScripts.length > 0 ? "opacity-50 pointer-events-none" : ""}`}>
-                      <FileUploader
-                        key={fileUploaderKey} // Add a key to force re-render
-                        onFilesAdded={(files) => handleAnswerScriptUpload(files)}
-                        maxFiles={1} // Ensure this is respected
-                        maxSize={10485760} // 10MB
-                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                      />
-                    </div>
-                    {uploadedAnswerScripts.length > 0 && (
-                      <div className="mt-4">
-                        <h4 className="mb-2 text-sm font-medium">Uploaded File:</h4>
-                        <div className="max-h-40 overflow-y-auto rounded-md border p-2">
-                          {uploadedAnswerScripts.map((file, index) => (
-                            <div key={index} className="flex items-center justify-between py-1">
-                              <div className="flex items-center gap-2">
-                                <FileText className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">{file}</span>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteAnswerScript(index)}
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          ))}
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Upload Reference Answer</label>
+                        <div className={`relative ${uploadedReferenceAnswers.length > 0 ? "opacity-50 pointer-events-none" : ""}`}>
+                          <FileUploader
+                            key={fileUploaderKey} // Add a key to force re-render
+                            onFilesAdded={(files) => handleReferenceAnswerUpload(files)}
+                            maxFiles={1} // Ensure this is respected
+                            maxSize={10485760} // 10MB
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                          />
                         </div>
-                      </div>
-                    )}
-                  </CardContent>
-                  <CardFooter>
-                    <Button className="w-full" onClick={handleProcessAnswerScripts}>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Process Answer Scripts
-                    </Button>
-                  </CardFooter>
-                  {processedAnswerText && (
-                    <div className="mt-4 p-4 border rounded-md bg-black text-white">
-                      <h3 className="text-lg font-medium">Processed Text:</h3>
-                      <p className="mt-2">{processedAnswerText}</p>
-                    </div>
-                  )}
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Upload Reference Answers</CardTitle>
-                    <CardDescription>Upload reference answers for AI evaluation</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className={`relative ${uploadedReferenceAnswers.length > 0 ? "opacity-50 pointer-events-none" : ""}`}>
-                      <FileUploader
-                        key={fileUploaderKey} // Add a key to force re-render
-                        onFilesAdded={(files) => handleReferenceAnswerUpload(files)}
-                        maxFiles={1} // Ensure this is respected
-                        maxSize={10485760} // 10MB
-                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.jpg"
-                      />
-                    </div>
-                    {uploadedReferenceAnswers.length > 0 && (
-                      <div className="mt-4">
-                        <h4 className="mb-2 text-sm font-medium">Uploaded File:</h4>
-                        <div className="max-h-40 overflow-y-auto rounded-md border p-2">
-                          {uploadedReferenceAnswers.map((file, index) => (
-                            <div key={index} className="flex items-center justify-between py-1">
-                              <div className="flex items-center gap-2">
-                                <FileText className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">{file}</span>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteReferenceAnswer(index)}
-                              >
-                                Delete
-                              </Button>
+                        {uploadedReferenceAnswers.length > 0 && (
+                          <div className="mt-4">
+                            <h4 className="mb-2 text-sm font-medium">Uploaded File:</h4>
+                            <div className="max-h-40 overflow-y-auto rounded-md border p-2">
+                              {uploadedReferenceAnswers.map((file, index) => (
+                                <div key={index} className="flex items-center justify-between py-1">
+                                  <div className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm">{file}</span>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </CardContent>
-                  <CardFooter>
-                    <Button className="w-full" onClick={handleProcessReferenceAnswers}>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Process Reference Answers
-                    </Button>
-                  </CardFooter>
-                  {processedReferenceText && (
-                    <div className="mt-4 p-4 border rounded-md bg-black text-white">
-                      <h3 className="text-lg font-medium">Reference Answer:</h3>
-                      <p className="mt-2">{processedReferenceText}</p>
-                    </div>
-                  )}
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Evaluate Answer Scripts</CardTitle>
-                    <CardDescription>
-                      Perform semantic analysis and calculate scores.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium mb-2">Select Evaluation Model</label>
-                      <select
-                        value={selectedModel}
-                        onChange={(e) => setSelectedModel(e.target.value as "sbert" | "gemini")}
-                        className="w-full rounded-md border p-2"
-                      >
-                        <option value="sbert">SBERT</option>
-                        <option value="gemini">Gemini</option>
-                      </select>
-                    </div>
-                    <Button
-                      className="w-full"
-                      onClick={handleEvaluateScripts}
-                      disabled={
-                        uploadedAnswerScripts.length === 0 ||
-                        uploadedReferenceAnswers.length === 0
-                      }
-                    >
-                      <Upload className="mr-2 h-4 w-4" />
-                      Evaluate Scripts
-                    </Button>
-                    {evaluationResults ? (
-                      <div className="mt-4">
-                        <h4 className="text-lg font-semibold text-white mb-4">Evaluation Results</h4>
-                        <div className="rounded-lg border shadow-md p-6 bg-black">
-                          <div className="grid grid-cols-2 gap-4">
-                            {currentStudent.name && (
-                              <div className="flex flex-col">
-                                <span className="text-sm font-medium text-gray-400">Student Name</span>
-                                <span className="text-base font-semibold text-white">{currentStudent.name}</span>
-                              </div>
-                            )}
-                            {currentStudent.class && (
-                              <div className="flex flex-col">
-                                <span className="text-sm font-medium text-gray-400">Class</span>
-                                <span className="text-base font-semibold text-white">{currentStudent.class}</span>
-                              </div>
-                            )}
-                            {currentStudent.roll_no && (
-                              <div className="flex flex-col">
-                                <span className="text-sm font-medium text-gray-400">Roll Number</span>
-                                <span className="text-base font-semibold text-white">{currentStudent.roll_no}</span>
-                              </div>
-                            )}
-                            {uploadedAnswerScripts.length > 0 && (
-                              <div className="flex flex-col">
-                                <span className="text-sm font-medium text-gray-400">Uploaded File</span>
-                                <span className="text-base font-semibold text-white">{uploadedAnswerScripts[0]}</span>
-                              </div>
-                            )}
-                            {evaluationResults.similarity_score !== undefined && (
-                              <div className="flex flex-col">
-                                <span className="text-sm font-medium text-gray-400">Similarity Score</span>
-                                <span className="text-base font-semibold text-green-400">{evaluationResults.similarity_score}%</span>
-                              </div>
-                            )}
-                            {evaluationResults.marks_obtained !== undefined && (
-                              <div className="flex flex-col">
-                                <span className="text-sm font-medium text-gray-400">Marks Obtained</span>
-                                <span className="text-base font-semibold text-blue-400">{evaluationResults.marks_obtained}</span>
-                              </div>
-                            )}
+                      <Button className="w-full" onClick={handleProcessReferenceAnswers}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Process Reference Answer
+                      </Button>
+                      {processedReferenceText && (
+                        <div className="mt-4 p-4 border rounded-md bg-black text-white">
+                          <h3 className="text-lg font-medium">Processed Reference Answer:</h3>
+                          <p className="mt-2">{processedReferenceText}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                    <CardFooter>
+                      <Button className="w-full" onClick={handleExamSetupComplete}>
+                        Proceed to Answer Sheet Upload
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ) : (
+                  <Card className="space-y-4">
+                    <CardHeader>
+                      <CardTitle>Answer Sheet Upload and Evaluation</CardTitle>
+                      <CardDescription>Upload answer sheets for each student and evaluate them.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">Current Student:</p>
+                          <div className="p-4 border rounded-md bg-black text-white">
+                            <p className="text-sm">
+                              <strong>Name:</strong> {currentStudent.name || "N/A"}
+                            </p>
+                            <p className="text-sm">
+                              <strong>Class:</strong> {currentStudent.class || "N/A"}
+                            </p>
+                            <p className="text-sm">
+                              <strong>Roll Number:</strong> {currentStudent.roll_no || "N/A"}
+                            </p>
                           </div>
                         </div>
+                        <div className={`relative ${uploadedAnswerScripts.length > 0 ? "opacity-50 pointer-events-none" : ""}`}>
+                          <FileUploader
+                            key={fileUploaderKey} // Add a key to force re-render
+                            onFilesAdded={(files) => handleAnswerScriptUpload(files)}
+                            maxFiles={1} // Ensure this is respected
+                            maxSize={10485760} // 10MB
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                          />
+                        </div>
+                        {uploadedAnswerScripts.length > 0 && (
+                          <div className="mt-4">
+                            <h4 className="mb-2 text-sm font-medium">Uploaded File:</h4>
+                            <div className="max-h-40 overflow-y-auto rounded-md border p-2">
+                              {uploadedAnswerScripts.map((file, index) => (
+                                <div key={index} className="flex items-center justify-between py-1">
+                                  <div className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm">{file}</span>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteAnswerScript(index)}
+                                  >
+                                    Delete
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {processedAnswerText && (
+                          <div className="mt-4 p-4 border rounded-md bg-black text-white">
+                            <h3 className="text-lg font-medium">Processed Answer Text:</h3>
+                            <p className="mt-2">{processedAnswerText}</p>
+                          </div>
+                        )}
+                        {evaluationResults && (
+                          <div className="mt-4 p-4 border rounded-md bg-black text-white">
+                            <h3 className="text-lg font-medium">Evaluation Results:</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <p className="text-sm font-medium">Similarity Score:</p>
+                                <p className="text-base font-semibold text-green-400">{evaluationResults.similarity_score}%</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">Marks Obtained:</p>
+                                <p className="text-base font-semibold text-blue-400">{evaluationResults.marks_obtained}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="mt-4 text-sm text-gray-400">
-                        No evaluation results to display. Please evaluate scripts to see results.
+                    </CardContent>
+                    <CardFooter>
+                      <div className="flex flex-col space-y-4">
+                        <Button className="w-full" onClick={handleProcessAnswerScripts}>
+                          <Upload className="mr-2 h-4 w-4" />
+                          Process Answer Sheet
+                        </Button>
+                        <Button
+                          className="w-full"
+                          onClick={handleEvaluateScripts}
+                          disabled={uploadedAnswerScripts.length === 0}
+                        >
+                          <Upload className="mr-2 h-4 w-4" />
+                          Evaluate Answer Sheet
+                        </Button>
+                        <div className="flex justify-between w-full mt-4">
+                          <Button
+                            onClick={handlePreviousStudent}
+                            disabled={currentStudentIndex === 0}
+                          >
+                            Previous Student
+                          </Button>
+                          <Button
+                            onClick={currentStudentIndex >= students.length - 1 ? handleFinishEvaluation : handleNextStudent}
+                          >
+                            {currentStudentIndex >= students.length - 1 ? "Finish" : "Next Student"}
+                          </Button>
+                        </div>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-                <div className="flex justify-between mt-8">
-                  <Button
-                    className="w-1/3"
-                    onClick={handlePreviousStudent}
-                    disabled={currentStudentIndex === 0}
-                  >
-                    Previous Student
-                  </Button>
-                  {currentStudentIndex >= students.length - 1 ? (
-                    <Button className="w-1/3" onClick={handleFinishEvaluation}>
-                      Finish
-                    </Button>
-                  ) : (
-                    <Button
-                      className="w-1/3"
-                      onClick={handleNextStudent}
-                      disabled={currentStudentIndex >= students.length - 1}
-                    >
-                      Next Student
-                    </Button>
-                  )}
-                </div>
+                    </CardFooter>
+                  </Card>
+                )}
               </TabsContent>
 
               <TabsContent value="students" className="space-y-4">
@@ -901,7 +863,9 @@ export default function EducatorDashboard() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Students Marks List</CardTitle>
-                    <CardDescription>View the marks obtained by students</CardDescription>
+                    <CardDescription>
+                      {examName ? `Marks for Exam: ${examName}` : "View the marks obtained by students"}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="overflow-x-auto">
