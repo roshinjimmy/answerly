@@ -30,7 +30,8 @@ import {
   SidebarGroupContent,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import * as XLSX from "xlsx"; // Import XLSX library
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 export default function EducatorDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
@@ -46,6 +47,8 @@ export default function EducatorDashboard() {
   const [students, setStudents] = useState<{ name: string; class: string; roll_no: string }[]>([]);
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0);
   const [fileUploaderKey, setFileUploaderKey] = useState(0); // State to force re-render of FileUploader
+  const [marksList, setMarksList] = useState<{ name: string; class: string; roll_no: string; marks: number }[]>([]);
+  const [showMarksList, setShowMarksList] = useState(false); // State to toggle marks list display
 
   const handleAnswerScriptUpload = (files: File[]) => {
     if (files.length === 0) {
@@ -206,6 +209,19 @@ export default function EducatorDashboard() {
   };
 
   const handleNextStudent = () => {
+    const currentStudentMarks = {
+      name: currentStudent.name,
+      class: currentStudent.class,
+      roll_no: currentStudent.roll_no,
+      marks: evaluationResults?.marks_obtained || 0,
+    };
+
+    // Add the current student's marks only if not already added
+    setMarksList((prev) => {
+      const isAlreadyAdded = prev.some((student) => student.roll_no === currentStudent.roll_no);
+      return isAlreadyAdded ? prev : [...prev, currentStudentMarks];
+    });
+
     if (currentStudentIndex < students.length - 1) {
       resetUploadAndEvaluationSections();
       setCurrentStudentIndex((prevIndex) => prevIndex + 1);
@@ -221,6 +237,36 @@ export default function EducatorDashboard() {
     } else {
       alert("No previous students to process.");
     }
+  };
+
+  const handleFinishEvaluation = () => {
+    const currentStudentMarks = {
+      name: currentStudent.name,
+      class: currentStudent.class,
+      roll_no: currentStudent.roll_no,
+      marks: evaluationResults?.marks_obtained || 0,
+    };
+
+    // Add the current student's marks only if not already added
+    setMarksList((prev) => {
+      const isAlreadyAdded = prev.some((student) => student.roll_no === currentStudent.roll_no);
+      return isAlreadyAdded ? prev : [...prev, currentStudentMarks];
+    });
+
+    resetUploadAndEvaluationSections(); // Reset upload and evaluation sections
+    setActiveTab("students"); // Navigate to the "students" tab
+  };
+
+  const handleDownloadMarksList = () => {
+    const csvContent = [
+      ["Name", "Class", "Roll Number", "Marks"],
+      ...marksList.map((student) => [student.name, student.class, student.roll_no, student.marks]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    saveAs(blob, "marks_list.csv"); // Trigger download
   };
 
   const resetUploadAndEvaluationSections = () => {
@@ -745,13 +791,19 @@ export default function EducatorDashboard() {
                   >
                     Previous Student
                   </Button>
-                  <Button
-                    className="w-1/3"
-                    onClick={handleNextStudent}
-                    disabled={currentStudentIndex >= students.length - 1}
-                  >
-                    Next Student
-                  </Button>
+                  {currentStudentIndex >= students.length - 1 ? (
+                    <Button className="w-1/3" onClick={handleFinishEvaluation}>
+                      Finish
+                    </Button>
+                  ) : (
+                    <Button
+                      className="w-1/3"
+                      onClick={handleNextStudent}
+                      disabled={currentStudentIndex >= students.length - 1}
+                    >
+                      Next Student
+                    </Button>
+                  )}
                 </div>
               </TabsContent>
 
@@ -811,10 +863,10 @@ export default function EducatorDashboard() {
                                   student.performance === "Excellent"
                                     ? "success"
                                     : student.performance === "Good"
-                                      ? "default"
-                                      : student.performance === "Average"
-                                        ? "secondary"
-                                        : "destructive"
+                                    ? "default"
+                                    : student.performance === "Average"
+                                    ? "secondary"
+                                    : "destructive"
                                 }
                               >
                                 {student.performance}
@@ -843,6 +895,42 @@ export default function EducatorDashboard() {
                         Next
                       </Button>
                     </div>
+                  </CardFooter>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Students Marks List</CardTitle>
+                    <CardDescription>View the marks obtained by students</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="table-auto w-full border-collapse border border-gray-300">
+                        <thead>
+                          <tr>
+                            <th className="border border-gray-300 px-4 py-2">Name</th>
+                            <th className="border border-gray-300 px-4 py-2">Class</th>
+                            <th className="border border-gray-300 px-4 py-2">Roll Number</th>
+                            <th className="border border-gray-300 px-4 py-2">Marks</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {marksList.map((student, index) => (
+                            <tr key={index}>
+                              <td className="border border-gray-300 px-4 py-2">{student.name}</td>
+                              <td className="border border-gray-300 px-4 py-2">{student.class}</td>
+                              <td className="border border-gray-300 px-4 py-2">{student.roll_no}</td>
+                              <td className="border border-gray-300 px-4 py-2">{student.marks}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button className="w-full" onClick={handleDownloadMarksList}>
+                      Download Marks List
+                    </Button>
                   </CardFooter>
                 </Card>
               </TabsContent>
