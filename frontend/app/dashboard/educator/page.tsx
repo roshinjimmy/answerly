@@ -41,7 +41,8 @@ export default function EducatorDashboard() {
   const [uploadedReferenceFiles, setUploadedReferenceFiles] = useState<File[]>([]);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [selectedModel, setSelectedModel] = useState<"sbert" | "gemini">("sbert"); // Default to SBERT
-  const [processedText, setProcessedText] = useState<string | null>(null); // Add state for processed text
+  const [processedAnswerText, setProcessedAnswerText] = useState<string | null>(null); // Separate state for answer scripts
+  const [processedReferenceText, setProcessedReferenceText] = useState<string | null>(null); // Separate state for reference answers
   const [students, setStudents] = useState<{ name: string; class: string; roll_no: string }[]>([]);
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0);
 
@@ -81,7 +82,7 @@ export default function EducatorDashboard() {
         console.log("Response received:", response.data);
 
         if (response.data && response.data.extracted_text) {
-          setProcessedText(response.data.extracted_text); // Ensure processed text is set
+          setProcessedAnswerText(response.data.extracted_text); // Set processed text for answer scripts
           console.log("Processed text set successfully.");
         } else {
           console.warn("No extracted text found in the response.");
@@ -113,7 +114,7 @@ export default function EducatorDashboard() {
         console.log("Response received:", response.data);
 
         if (response.data && response.data.extracted_text) {
-          setProcessedText(response.data.extracted_text); // Set the processed reference text
+          setProcessedReferenceText(response.data.extracted_text); // Set processed text for reference answers
           console.log("Reference answer processed successfully.");
         } else {
           console.warn("No extracted text found in the response.");
@@ -212,7 +213,8 @@ export default function EducatorDashboard() {
     setUploadedReferenceAnswers([]);
     setUploadedAnswerFiles([]);
     setUploadedReferenceFiles([]);
-    setProcessedText(null);
+    setProcessedAnswerText(null);
+    setProcessedReferenceText(null);
     setEvaluationResults(null);
   };
 
@@ -527,14 +529,14 @@ export default function EducatorDashboard() {
                     </div>
                     <div className="space-y-2">
                       <p className="text-sm font-medium">Current Student:</p>
-                      <div className="p-4 border rounded-md bg-gray-50">
-                        <p className="text-sm text-black">
+                      <div className="p-4 border rounded-md bg-black text-white">
+                        <p className="text-sm">
                           <strong>Name:</strong> {currentStudent.name || "N/A"}
                         </p>
-                        <p className="text-sm text-black">
+                        <p className="text-sm">
                           <strong>Class:</strong> {currentStudent.class || "N/A"}
                         </p>
-                        <p className="text-sm text-black">
+                        <p className="text-sm">
                           <strong>Roll Number:</strong> {currentStudent.roll_no || "N/A"}
                         </p>
                       </div>
@@ -567,13 +569,13 @@ export default function EducatorDashboard() {
                       <Upload className="mr-2 h-4 w-4" />
                       Process Answer Scripts
                     </Button>
-                    {processedText && (
-                      <div className="mt-4 p-4 border rounded-md bg-gray-50">
-                        <h3 className="text-lg font-medium">Processed Text:</h3>
-                        <p className="mt-2 text-gray-700">{processedText}</p>
-                      </div>
-                    )}
                   </CardFooter>
+                  {processedAnswerText && (
+                    <div className="mt-4 p-4 border rounded-md bg-black text-white">
+                      <h3 className="text-lg font-medium">Processed Text:</h3>
+                      <p className="mt-2">{processedAnswerText}</p>
+                    </div>
+                  )}
                 </Card>
 
                 <Card>
@@ -608,13 +610,13 @@ export default function EducatorDashboard() {
                       <Upload className="mr-2 h-4 w-4" />
                       Process Reference Answers
                     </Button>
-                    {processedText && (
-                      <div className="mt-4 p-4 border rounded-md bg-gray-50">
-                        <h3 className="text-lg font-medium">Reference Answer:</h3>
-                        <p className="mt-2 text-gray-700">{processedText}</p>
-                      </div>
-                    )}
                   </CardFooter>
+                  {processedReferenceText && (
+                    <div className="mt-4 p-4 border rounded-md bg-black text-white">
+                      <h3 className="text-lg font-medium">Reference Answer:</h3>
+                      <p className="mt-2">{processedReferenceText}</p>
+                    </div>
+                  )}
                 </Card>
                 <Card>
                   <CardHeader>
@@ -624,6 +626,17 @@ export default function EducatorDashboard() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium mb-2">Select Evaluation Model</label>
+                      <select
+                        value={selectedModel}
+                        onChange={(e) => setSelectedModel(e.target.value as "sbert" | "gemini")}
+                        className="w-full rounded-md border p-2"
+                      >
+                        <option value="sbert">SBERT</option>
+                        <option value="gemini">Gemini</option>
+                      </select>
+                    </div>
                     <Button
                       className="w-full"
                       onClick={handleEvaluateScripts}
