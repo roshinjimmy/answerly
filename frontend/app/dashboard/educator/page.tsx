@@ -45,6 +45,7 @@ export default function EducatorDashboard() {
   const [processedReferenceText, setProcessedReferenceText] = useState<string | null>(null); // Separate state for reference answers
   const [students, setStudents] = useState<{ name: string; class: string; roll_no: string }[]>([]);
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0);
+  const [fileUploaderKey, setFileUploaderKey] = useState(0); // State to force re-render of FileUploader
 
   const handleAnswerScriptUpload = (files: File[]) => {
     if (files.length === 0) {
@@ -52,8 +53,8 @@ export default function EducatorDashboard() {
       return;
     }
     const newFiles = files.map((file) => file.name);
-    setUploadedAnswerScripts((prev) => [...prev, ...newFiles]);
-    setUploadedAnswerFiles((prev) => [...prev, ...files]);
+    setUploadedAnswerScripts(newFiles); // Reset the uploaded files
+    setUploadedAnswerFiles(files); // Reset the uploaded file objects
   };
 
   const handleReferenceAnswerUpload = (files: File[]) => {
@@ -62,8 +63,22 @@ export default function EducatorDashboard() {
       return;
     }
     const newFiles = files.map((file) => file.name);
-    setUploadedReferenceAnswers((prev) => [...prev, ...newFiles]);
-    setUploadedReferenceFiles((prev) => [...prev, ...files]);
+    setUploadedReferenceAnswers(newFiles); // Reset the uploaded files
+    setUploadedReferenceFiles(files); // Reset the uploaded file objects
+  };
+
+  const handleDeleteAnswerScript = (index: number) => {
+    setUploadedAnswerScripts((prev) => prev.filter((_, i) => i !== index));
+    setUploadedAnswerFiles((prev) => prev.filter((_, i) => i !== index));
+    // Force re-render by resetting the key of the FileUploader
+    setFileUploaderKey((prevKey) => prevKey + 1);
+  };
+
+  const handleDeleteReferenceAnswer = (index: number) => {
+    setUploadedReferenceAnswers((prev) => prev.filter((_, i) => i !== index));
+    setUploadedReferenceFiles((prev) => prev.filter((_, i) => i !== index));
+    // Force re-render by resetting the key of the FileUploader
+    setFileUploaderKey((prevKey) => prevKey + 1);
   };
 
   const handleProcessAnswerScripts = async () => {
@@ -216,6 +231,7 @@ export default function EducatorDashboard() {
     setProcessedAnswerText(null);
     setProcessedReferenceText(null);
     setEvaluationResults(null);
+    setFileUploaderKey((prevKey) => prevKey + 1); // Reset FileUploader by updating its key
   };
 
   const currentStudent = students[currentStudentIndex] || { name: "", class: "", roll_no: "" };
@@ -543,21 +559,32 @@ export default function EducatorDashboard() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <FileUploader
-                      onFilesAdded={handleAnswerScriptUpload}
-                      maxFiles={10}
-                      maxSize={10485760} // 10MB
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                    />
-
+                    <div className={`relative ${uploadedAnswerScripts.length > 0 ? "opacity-50 pointer-events-none" : ""}`}>
+                      <FileUploader
+                        key={fileUploaderKey} // Add a key to force re-render
+                        onFilesAdded={(files) => handleAnswerScriptUpload(files)}
+                        maxFiles={1} // Ensure this is respected
+                        maxSize={10485760} // 10MB
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                      />
+                    </div>
                     {uploadedAnswerScripts.length > 0 && (
                       <div className="mt-4">
-                        <h4 className="mb-2 text-sm font-medium">Uploaded Files:</h4>
+                        <h4 className="mb-2 text-sm font-medium">Uploaded File:</h4>
                         <div className="max-h-40 overflow-y-auto rounded-md border p-2">
                           {uploadedAnswerScripts.map((file, index) => (
-                            <div key={index} className="flex items-center gap-2 py-1">
-                              <FileText className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">{file}</span>
+                            <div key={index} className="flex items-center justify-between py-1">
+                              <div className="flex items-center gap-2">
+                                <FileText className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm">{file}</span>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteAnswerScript(index)}
+                              >
+                                Delete
+                              </Button>
                             </div>
                           ))}
                         </div>
@@ -584,21 +611,32 @@ export default function EducatorDashboard() {
                     <CardDescription>Upload reference answers for AI evaluation</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <FileUploader
-                      onFilesAdded={handleReferenceAnswerUpload}
-                      maxFiles={10}
-                      maxSize={10485760} // 10MB
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.jpg"
-                    />
-
+                    <div className={`relative ${uploadedReferenceAnswers.length > 0 ? "opacity-50 pointer-events-none" : ""}`}>
+                      <FileUploader
+                        key={fileUploaderKey} // Add a key to force re-render
+                        onFilesAdded={(files) => handleReferenceAnswerUpload(files)}
+                        maxFiles={1} // Ensure this is respected
+                        maxSize={10485760} // 10MB
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.jpg"
+                      />
+                    </div>
                     {uploadedReferenceAnswers.length > 0 && (
                       <div className="mt-4">
-                        <h4 className="mb-2 text-sm font-medium">Uploaded Files:</h4>
+                        <h4 className="mb-2 text-sm font-medium">Uploaded File:</h4>
                         <div className="max-h-40 overflow-y-auto rounded-md border p-2">
                           {uploadedReferenceAnswers.map((file, index) => (
-                            <div key={index} className="flex items-center gap-2 py-1">
-                              <FileText className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">{file}</span>
+                            <div key={index} className="flex items-center justify-between py-1">
+                              <div className="flex items-center gap-2">
+                                <FileText className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm">{file}</span>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteReferenceAnswer(index)}
+                              >
+                                Delete
+                              </Button>
                             </div>
                           ))}
                         </div>
