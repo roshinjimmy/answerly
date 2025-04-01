@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { BookOpen, FileText, Home, LogOut, RefreshCw, Settings, Upload, User } from "lucide-react"
 import { motion } from "framer-motion"
 import { ThemeToggle } from "@/components/theme-toggle"
-import axios from "axios" // Add this import
+import axios from "axios"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
@@ -32,74 +33,75 @@ import {
 } from "@/components/ui/sidebar"
 
 export default function StudentDashboard() {
+  const router = useRouter() // Add router for navigation
   const [activeTab, setActiveTab] = useState("overview")
   const [uploadedAnswerSheets, setUploadedAnswerSheets] = useState<string[]>([])
   const [showExtractedText, setShowExtractedText] = useState(false)
   const [extractedText, setExtractedText] = useState("")
   const [isEditingText, setIsEditingText] = useState(false)
-  // Add new states for evaluation results
   const [evaluationResults, setEvaluationResults] = useState<{ similarity_score: number; marks_obtained: number } | null>(null)
   const [isEvaluating, setIsEvaluating] = useState(false)
   const [showResults, setShowResults] = useState(false)
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null)
 
-  // Add reference answer (this would normally come from a database or API)
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user")
+    if (storedUser) {
+      setUser(JSON.parse(storedUser))
+    }
+  }, [])
+
   const referenceAnswer = `The Importance of Geography in Understanding the World
 Geography is the study of the Earth's physical features, climate, and human interactions with the environment. It helps us understand how natural processes like weather, landforms, and ecosystems shape our planet. Additionally, geography explains how people adapt to different environments, from deserts to rainforests. By studying geography, we can make informed decisions about urban planning, disaster management, and environmental conservation. It also fosters global awareness by showing the connections between different regions and cultures. Overall, geography is essential for understanding the world and solving real-world challenges.`
 
-const handleAnswerSheetUpload = async (files: File[]) => {
-  const newFiles = files.map((file) => file.name)
-  setUploadedAnswerSheets((prev) => [...prev, ...newFiles])
+  const handleAnswerSheetUpload = async (files: File[]) => {
+    const newFiles = files.map((file) => file.name)
+    setUploadedAnswerSheets((prev) => [...prev, ...newFiles])
 
-  if (files.length > 0) {
-    try {
-      // Create a FormData object to send the file
-      const formData = new FormData()
-      formData.append('file', files[0])
-      
-      // Show loading state
-      setShowExtractedText(false)
-      setExtractedText("Processing your document...")
-      setShowExtractedText(true)
-      
-      // Send the file to the backend API using axios with increased timeout
-      const response = await axios.post('http://localhost:8000/api/upload/', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        timeout: 60000, // Increase timeout to 60 seconds
-      });
-      
-      // Update the extracted text state with the response
-      setExtractedText(response.data.extracted_text || "No text could be extracted from the document.")
-      setShowExtractedText(true)
-    } catch (error) {
-      console.error('Error uploading file:', error)
-      // More detailed error handling
-      let errorMessage = "Error extracting text. Please try again."
-      
-      if (axios.isAxiosError(error)) {
-        if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-          errorMessage = "The request timed out. The document might be too large or complex. Please try again with a simpler document."
-        } else if (error.response) {
-          // Check for specific error messages in the response
-          if (error.response.data && typeof error.response.data === 'object' && error.response.data.detail) {
-            if (error.response.data.detail.includes('session_timed_out') || error.response.data.detail.includes('GOAWAY')) {
-              errorMessage = "The server session timed out. Please try again with a smaller document or try later when the server is less busy."
+    if (files.length > 0) {
+      try {
+        const formData = new FormData()
+        formData.append('file', files[0])
+
+        setShowExtractedText(false)
+        setExtractedText("Processing your document...")
+        setShowExtractedText(true)
+
+        const response = await axios.post('http://localhost:8000/api/upload/', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          timeout: 60000,
+        });
+
+        setExtractedText(response.data.extracted_text || "No text could be extracted from the document.")
+        setShowExtractedText(true)
+      } catch (error) {
+        console.error('Error uploading file:', error)
+        let errorMessage = "Error extracting text. Please try again."
+
+        if (axios.isAxiosError(error)) {
+          if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+            errorMessage = "The request timed out. The document might be too large or complex. Please try again with a simpler document."
+          } else if (error.response) {
+            if (error.response.data && typeof error.response.data === 'object' && error.response.data.detail) {
+              if (error.response.data.detail.includes('session_timed_out') || error.response.data.detail.includes('GOAWAY')) {
+                errorMessage = "The server session timed out. Please try again with a smaller document or try later when the server is less busy."
+              } else {
+                errorMessage = `Error (${error.response.status}): ${error.response.data.detail}`
+              }
             } else {
-              errorMessage = `Error (${error.response.status}): ${error.response.data.detail}`
+              errorMessage = `Error (${error.response.status}): ${error.message}`
             }
-          } else {
-            errorMessage = `Error (${error.response.status}): ${error.message}`
           }
         }
+
+        setExtractedText(errorMessage)
+        setShowExtractedText(true)
       }
-      
-      setExtractedText(errorMessage)
-      setShowExtractedText(true)
     }
   }
-}
-  // Add function to handle evaluation submission
+
   const handleSubmitForEvaluation = async () => {
     if (!extractedText) {
       alert("Please upload and process an answer sheet first.")
@@ -107,20 +109,17 @@ const handleAnswerSheetUpload = async (files: File[]) => {
     }
 
     setIsEvaluating(true)
-    
+
     try {
-      // Simulate API call to evaluate answer
-      // In a real app, you would send both texts to your backend
       setTimeout(() => {
-        // Calculate similarity (this is a simplified version - in reality use your backend API)
         const similarity = calculateSimilarity(extractedText, referenceAnswer)
         const marks = Math.round(similarity * 100)
-        
+
         setEvaluationResults({
           similarity_score: similarity,
           marks_obtained: marks
         })
-        
+
         setShowResults(true)
         setIsEvaluating(false)
       }, 1500)
@@ -130,22 +129,24 @@ const handleAnswerSheetUpload = async (files: File[]) => {
       alert("Evaluation failed. Please try again.")
     }
   }
-  
-  // Simple similarity calculation function (for demo purposes)
+
   const calculateSimilarity = (text1: string, text2: string): number => {
-    // This is a very simplified similarity calculation
-    // In reality, you would use your backend API with SBERT or Gemini
     const words1 = text1.toLowerCase().split(/\s+/)
     const words2 = text2.toLowerCase().split(/\s+/)
-    
+
     const commonWords = words1.filter(word => words2.includes(word))
     const similarity = commonWords.length / Math.max(words1.length, words2.length)
-    
-    return Math.min(Math.max(similarity, 0), 1) // Ensure between 0 and 1
+
+    return Math.min(Math.max(similarity, 0), 1)
   }
 
   const requestRevaluation = () => {
     alert("Reevaluation request submitted successfully!")
+  }
+
+  const handleSignOut = () => {
+    localStorage.removeItem("user") // Clear user data from localStorage
+    router.push("/") // Redirect to login page
   }
 
   return (
@@ -215,19 +216,19 @@ const handleAnswerSheetUpload = async (files: File[]) => {
             <div className="flex items-center gap-2">
               <Avatar>
                 <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Avatar" />
-                <AvatarFallback>JS</AvatarFallback>
+                <AvatarFallback>{user?.name?.[0] || "?"}</AvatarFallback>
               </Avatar>
               <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-medium">John Smith</p>
-                <p className="truncate text-xs text-muted-foreground">john.smith@university.edu</p>
+                <p className="text-sm font-medium">{user?.name || "Guest"}</p>
+                <p className="truncate text-xs text-muted-foreground">{user?.email || "No email available"}</p>
               </div>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
           </SidebarFooter>
         </Sidebar>
-        <div className="flex-1 ml-75 ">
+        <div className="flex-1 ml-75">
           <DashboardHeader>
             <div className="flex items-center">
               <SidebarTrigger className="mr-2" />
@@ -241,7 +242,7 @@ const handleAnswerSheetUpload = async (files: File[]) => {
               <ThemeToggle />
               <Avatar>
                 <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Avatar" />
-                <AvatarFallback>JS</AvatarFallback>
+                <AvatarFallback>{user?.name?.[0] || "?"}</AvatarFallback>
               </Avatar>
             </div>
           </DashboardHeader>
@@ -456,7 +457,7 @@ const handleAnswerSheetUpload = async (files: File[]) => {
                       <FileUploader
                         onFilesAdded={handleAnswerSheetUpload}
                         maxFiles={1}
-                        maxSize={10485760} // 10MB
+                        maxSize={10485760}
                         accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                       />
 
@@ -536,10 +537,10 @@ const handleAnswerSheetUpload = async (files: File[]) => {
                             <div className="flex items-center gap-3">
                               <Avatar className="h-12 w-12">
                                 <AvatarImage src="/placeholder.svg?height=48&width=48" alt="Avatar" />
-                                <AvatarFallback>JS</AvatarFallback>
+                                <AvatarFallback>{user?.name?.[0] || "?"}</AvatarFallback>
                               </Avatar>
                               <div>
-                                <h3 className="font-medium">John Smith</h3>
+                                <h3 className="font-medium">{user?.name || "Guest"}</h3>
                                 <p className="text-sm text-muted-foreground">Geography Assignment</p>
                               </div>
                             </div>
@@ -852,10 +853,10 @@ const handleAnswerSheetUpload = async (files: File[]) => {
                       <div className="flex flex-col items-center space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
                         <Avatar className="h-24 w-24">
                           <AvatarImage src="/placeholder.svg?height=96&width=96" alt="Avatar" />
-                          <AvatarFallback>JS</AvatarFallback>
+                          <AvatarFallback>{user?.name?.[0] || "?"}</AvatarFallback>
                         </Avatar>
                         <div className="space-y-1 text-center sm:text-left">
-                          <h3 className="text-xl font-bold">John Smith</h3>
+                          <h3 className="text-xl font-bold">{user?.name || "Guest"}</h3>
                           <p className="text-sm text-muted-foreground">Student ID: S12345</p>
                           <div className="flex flex-wrap gap-2">
                             <Badge>Computer Science</Badge>
@@ -868,14 +869,14 @@ const handleAnswerSheetUpload = async (files: File[]) => {
                         <div className="grid gap-4 sm:grid-cols-2">
                           <div className="space-y-2">
                             <label className="text-sm font-medium">Full Name</label>
-                            <input type="text" className="w-full rounded-md border p-2" defaultValue="John Smith" />
+                            <input type="text" className="w-full rounded-md border p-2" defaultValue={user?.name || "Guest"} />
                           </div>
                           <div className="space-y-2">
                             <label className="text-sm font-medium">Email</label>
                             <input
                               type="email"
                               className="w-full rounded-md border p-2"
-                              defaultValue="john.smith@university.edu"
+                              defaultValue={user?.email || "No email available"}
                             />
                           </div>
                         </div>
