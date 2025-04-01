@@ -26,12 +26,16 @@ function RegisterPage() {
     password: "",
     confirmPassword: "",
     role: "student",
+    class: "", // Added field
+    rollNo: "", // Added field
   })
   const [errors, setErrors] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: "",
+    class: "", // Added field
+    rollNo: "", // Added field
   })
   const [serverError, setServerError] = useState("")
 
@@ -43,6 +47,8 @@ function RegisterPage() {
       email: "",
       password: "",
       confirmPassword: "",
+      class: "", // Added field
+      rollNo: "", // Added field
     }
 
     if (!formData.name) {
@@ -69,6 +75,17 @@ function RegisterPage() {
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match"
       isValid = false
+    }
+
+    if (formData.role === "student") {
+      if (!formData.class) {
+        newErrors.class = "Class is required"
+        isValid = false
+      }
+      if (!formData.rollNo) {
+        newErrors.rollNo = "Roll Number is required"
+        isValid = false
+      }
     }
 
     setErrors(newErrors)
@@ -104,7 +121,9 @@ function RegisterPage() {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        role: formData.role
+        role: formData.role,
+        class: formData.class, // Added field
+        rollNo: formData.rollNo, // Added field
       });
 
       if (response.data.success) {
@@ -259,6 +278,37 @@ function RegisterPage() {
                     </div>
                   </RadioGroup>
                 </div>
+
+                {formData.role === "student" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="class">Class</Label>
+                      <Input
+                        id="class"
+                        name="class"
+                        placeholder="Enter your class"
+                        className={`pl-10 ${errors.class ? "border-destructive" : ""}`}
+                        value={formData.class}
+                        onChange={handleChange}
+                        disabled={isLoading}
+                      />
+                      {errors.class && <p className="text-sm text-destructive">{errors.class}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="rollNo">Roll Number</Label>
+                      <Input
+                        id="rollNo"
+                        name="rollNo"
+                        placeholder="Enter your roll number"
+                        className={`pl-10 ${errors.rollNo ? "border-destructive" : ""}`}
+                        value={formData.rollNo}
+                        onChange={handleChange}
+                        disabled={isLoading}
+                      />
+                      {errors.rollNo && <p className="text-sm text-destructive">{errors.rollNo}</p>}
+                    </div>
+                  </>
+                )}
 
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Creating account..." : "Create account"}

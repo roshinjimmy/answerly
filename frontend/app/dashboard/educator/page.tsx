@@ -49,7 +49,8 @@ export default function EducatorDashboard() {
   const [selectedModel, setSelectedModel] = useState<"sbert" | "gemini">("sbert"); // Default to SBERT
   const [processedAnswerText, setProcessedAnswerText] = useState<string | null>(null); // Separate state for answer scripts
   const [processedReferenceText, setProcessedReferenceText] = useState<string | null>(null); // Separate state for reference answers
-  const [students, setStudents] = useState<{ name: string; class: string; roll_no: string }[]>([]);
+  const [students, setStudents] = useState<{ name: string; class_name: string; roll_no: string; email: string }[]>([]);
+  const [excelStudents, setExcelStudents] = useState<{ name: string; class: string; roll_no: string }[]>([]); // New state for Excel students
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0);
   const [fileUploaderKey, setFileUploaderKey] = useState(0); // State to force re-render of FileUploader
   const [marksList, setMarksList] = useState<{ name: string; class: string; roll_no: string; marks: number }[]>([]);
@@ -65,6 +66,24 @@ export default function EducatorDashboard() {
       setUpdatedUser({ name: parsedUser.name, email: parsedUser.email });
     }
   }, [])
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const response = await axios.get("http://localhost:8000/api/students");
+        if (response.data.success) {
+          console.log("Fetched students:", response.data.students); // Log fetched students
+          setStudents(response.data.students);
+        } else {
+          console.error("Failed to fetch students:", response.data.message);
+        }
+      } catch (error) {
+        console.error("Error fetching students:", error);
+      }
+    };
+
+    fetchStudents();
+  }, []);
 
   const handleSignOut = () => {
     localStorage.removeItem("user") // Clear user data from localStorage
@@ -103,7 +122,7 @@ export default function EducatorDashboard() {
   };
 
   const handleExamSetupComplete = () => {
-    if (examName && students.length > 0 && processedReferenceText) {
+    if (examName && excelStudents.length > 0 && processedReferenceText) {
       setIsExamSetupComplete(true);
     } else {
       alert("Please provide the exam name, upload student details, and process the reference answer.");
@@ -264,7 +283,7 @@ export default function EducatorDashboard() {
       const jsonData = XLSX.utils.sheet_to_json(sheet);
 
       if (jsonData.length > 0) {
-        setStudents(jsonData as { name: string; class: string; roll_no: string }[]);
+        setExcelStudents(jsonData as { name: string; class: string; roll_no: string }[]); // Store Excel students separately
         setCurrentStudentIndex(0); // Start with the first student
       } else {
         alert("The Excel sheet is empty or invalid.");
@@ -276,7 +295,7 @@ export default function EducatorDashboard() {
   const handleNextStudent = () => {
     const currentStudentMarks = {
       name: currentStudent.name,
-      class: currentStudent.class,
+      class: currentStudent.class, // Fixed property name
       roll_no: currentStudent.roll_no,
       marks: evaluationResults?.marks_obtained || 0,
     };
@@ -287,11 +306,11 @@ export default function EducatorDashboard() {
       return isAlreadyAdded ? prev : [...prev, currentStudentMarks];
     });
 
-    if (currentStudentIndex < students.length - 1) {
+    if (currentStudentIndex < excelStudents.length - 1) {
       resetUploadAndEvaluationSections();
       setCurrentStudentIndex((prevIndex) => prevIndex + 1);
-    } else {
-      handleFinishEvaluation(); // Call finish evaluation when the last student is reached
+    } else if (currentStudentIndex === excelStudents.length - 1) {
+      handleFinishEvaluation(); // Call finish evaluation only when the last student is reached
     }
   };
 
@@ -307,7 +326,7 @@ export default function EducatorDashboard() {
   const handleFinishEvaluation = () => {
     const currentStudentMarks = {
       name: currentStudent.name,
-      class: currentStudent.class,
+      class: currentStudent.class, // Fixed property name
       roll_no: currentStudent.roll_no,
       marks: evaluationResults?.marks_obtained || 0,
     };
@@ -343,7 +362,7 @@ export default function EducatorDashboard() {
     // Retain uploadedReferenceAnswers and uploadedReferenceFiles to use the same reference key for all students
   };
 
-  const currentStudent = students[currentStudentIndex] || { name: "", class: "", roll_no: "" };
+  const currentStudent = excelStudents[currentStudentIndex] || { name: "", class: "", roll_no: "" };
 
   return (
     <SidebarProvider>
@@ -839,9 +858,9 @@ export default function EducatorDashboard() {
                             Previous Student
                           </Button>
                           <Button
-                            onClick={currentStudentIndex >= students.length - 1 ? handleFinishEvaluation : handleNextStudent}
+                            onClick={currentStudentIndex >= excelStudents.length - 1 ? handleFinishEvaluation : handleNextStudent}
                           >
-                            {currentStudentIndex >= students.length - 1 ? "Finish" : "Next Student"}
+                            {currentStudentIndex >= excelStudents.length - 1 ? "Finish" : "Next Student"}
                           </Button>
                         </div>
                       </div>
@@ -853,119 +872,75 @@ export default function EducatorDashboard() {
               <TabsContent value="students" className="space-y-4">
                 <Card>
                   <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle>Student Management</CardTitle>
-                        <CardDescription>View and manage your students</CardDescription>
-                      </div>
-                      <Button>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Student
-                      </Button>
-                    </div>
+                    <CardTitle className="text-white text-base">Student Management</CardTitle>
+                    <CardDescription className="text-white text-sm">View and manage your students</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="rounded-md border">
-                      <div className="grid grid-cols-5 gap-4 p-4 font-medium">
-                        <div>Name</div>
-                        <div>ID</div>
-                        <div>Email</div>
-                        <div>Performance</div>
-                        <div>Actions</div>
+                    {students.length === 0 ? (
+                      <p className="text-center text-white text-base">No students found.</p>
+                    ) : (
+                      <div className="overflow-x-auto rounded-md border">
+                        <table className="w-full table-auto text-white text-base">
+                          <thead className="bg-muted">
+                            <tr>
+                              <th className="px-4 py-2 font-medium text-left">Name</th>
+                              <th className="px-4 py-2 font-medium text-left">Class</th>
+                              <th className="px-4 py-2 font-medium text-left">Roll Number</th>
+                              <th className="px-4 py-2 font-medium text-left">Email</th>
+                              <th className="px-4 py-2 font-medium text-left">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {students.map((student, i) => (
+                              <tr key={i} className="border-b">
+                                <td className="px-4 py-2">{student.name}</td>
+                                <td className="px-4 py-2">{student.class_name || "N/A"}</td>
+                                <td className="px-4 py-2">{student.roll_no || "N/A"}</td>
+                                <td className="px-4 py-2">{student.email}</td>
+                                <td className="px-4 py-2">
+                                  <div className="flex gap-2">
+                                    <Button variant="outline" size="sm">
+                                      View
+                                    </Button>
+                                    <Button variant="outline" size="sm">
+                                      Message
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
-                      <div className="divide-y">
-                        {[
-                          {
-                            name: "Alex Johnson",
-                            id: "S12345",
-                            email: "alex.j@university.edu",
-                            performance: "Excellent",
-                          },
-                          { name: "Maria Garcia", id: "S12346", email: "maria.g@university.edu", performance: "Good" },
-                          {
-                            name: "James Wilson",
-                            id: "S12347",
-                            email: "james.w@university.edu",
-                            performance: "Average",
-                          },
-                          { name: "Sarah Lee", id: "S12348", email: "sarah.l@university.edu", performance: "Good" },
-                          {
-                            name: "David Kim",
-                            id: "S12349",
-                            email: "david.k@university.edu",
-                            performance: "Needs Improvement",
-                          },
-                        ].map((student, i) => (
-                          <div key={i} className="grid grid-cols-5 gap-4 p-4">
-                            <div className="font-medium">{student.name}</div>
-                            <div>{student.id}</div>
-                            <div>{student.email}</div>
-                            <div>
-                              <Badge
-                                variant={
-                                  student.performance === "Excellent"
-                                    ? "success"
-                                    : student.performance === "Good"
-                                      ? "default"
-                                      : student.performance === "Average"
-                                        ? "secondary"
-                                        : "destructive"
-                                }
-                              >
-                                {student.performance}
-                              </Badge>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button variant="ghost" size="sm">
-                                View
-                              </Button>
-                              <Button variant="ghost" size="sm">
-                                Message
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    )}
                   </CardContent>
-                  <CardFooter>
-                    <div className="flex w-full items-center justify-between">
-                      <Button variant="outline" size="sm">
-                        Previous
-                      </Button>
-                      <div className="text-sm text-muted-foreground">Page 1 of 3</div>
-                      <Button variant="outline" size="sm">
-                        Next
-                      </Button>
-                    </div>
-                  </CardFooter>
                 </Card>
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Students Marks List</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-white text-base">Students Marks List</CardTitle>
+                    <CardDescription className="text-white text-sm">
                       {examName ? `Marks for Exam: ${examName}` : "View the marks obtained by students"}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="table-auto w-full border-collapse border border-gray-300">
-                        <thead>
+                    <div className="overflow-x-auto rounded-md border">
+                      <table className="w-full table-auto text-white text-base">
+                        <thead className="bg-muted">
                           <tr>
-                            <th className="border border-gray-300 px-4 py-2">Name</th>
-                            <th className="border border-gray-300 px-4 py-2">Class</th>
-                            <th className="border border-gray-300 px-4 py-2">Roll Number</th>
-                            <th className="border border-gray-300 px-4 py-2">Marks</th>
+                            <th className="px-4 py-2 font-medium text-left">Name</th>
+                            <th className="px-4 py-2 font-medium text-left">Class</th>
+                            <th className="px-4 py-2 font-medium text-left">Roll Number</th>
+                            <th className="px-4 py-2 font-medium text-left">Marks</th>
                           </tr>
                         </thead>
                         <tbody>
                           {marksList.map((student, index) => (
-                            <tr key={index}>
-                              <td className="border border-gray-300 px-4 py-2">{student.name}</td>
-                              <td className="border border-gray-300 px-4 py-2">{student.class}</td>
-                              <td className="border border-gray-300 px-4 py-2">{student.roll_no}</td>
-                              <td className="border border-gray-300 px-4 py-2">{student.marks}</td>
+                            <tr key={index} className="border-b">
+                              <td className="px-4 py-2">{student.name}</td>
+                              <td className="px-4 py-2">{student.class}</td>
+                              <td className="px-4 py-2">{student.roll_no}</td>
+                              <td className="px-4 py-2">{student.marks}</td>
                             </tr>
                           ))}
                         </tbody>
