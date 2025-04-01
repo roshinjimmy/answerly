@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/sidebar"
 
 export default function StudentDashboard() {
-  const router = useRouter() // Add router for navigation
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState("overview")
   const [uploadedAnswerSheets, setUploadedAnswerSheets] = useState<string[]>([])
   const [showExtractedText, setShowExtractedText] = useState(false)
@@ -42,12 +42,16 @@ export default function StudentDashboard() {
   const [evaluationResults, setEvaluationResults] = useState<{ similarity_score: number; marks_obtained: number } | null>(null)
   const [isEvaluating, setIsEvaluating] = useState(false)
   const [showResults, setShowResults] = useState(false)
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null)
+  const [user, setUser] = useState<{ id: string; name: string; email: string; role: string } | null>(null)
+  const [updatedUser, setUpdatedUser] = useState<{ name: string; email: string }>({ name: "", email: "" })
+  const [isUpdating, setIsUpdating] = useState(false)
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user")
     if (storedUser) {
-      setUser(JSON.parse(storedUser))
+      const parsedUser = JSON.parse(storedUser)
+      setUser(parsedUser)
+      setUpdatedUser({ name: parsedUser.name, email: parsedUser.email })
     }
   }, [])
 
@@ -147,6 +151,37 @@ Geography is the study of the Earth's physical features, climate, and human inte
   const handleSignOut = () => {
     localStorage.removeItem("user") // Clear user data from localStorage
     router.push("/") // Redirect to login page
+  }
+
+  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setUpdatedUser((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleProfileUpdate = async () => {
+    if (!user) return
+    setIsUpdating(true)
+
+    try {
+      const response = await axios.put(`http://localhost:8000/api/users/${user.id}`, {
+        name: updatedUser.name,
+        email: updatedUser.email,
+      })
+
+      if (response.data.success) {
+        const updatedUserData = { ...user, ...updatedUser }
+        setUser(updatedUserData)
+        localStorage.setItem("user", JSON.stringify(updatedUserData))
+        alert("Profile updated successfully!")
+      } else {
+        alert("Failed to update profile. Please try again.")
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error)
+      alert("An error occurred while updating your profile.")
+    } finally {
+      setIsUpdating(false)
+    }
   }
 
   return (
@@ -869,14 +904,22 @@ Geography is the study of the Earth's physical features, climate, and human inte
                         <div className="grid gap-4 sm:grid-cols-2">
                           <div className="space-y-2">
                             <label className="text-sm font-medium">Full Name</label>
-                            <input type="text" className="w-full rounded-md border p-2" defaultValue={user?.name || "Guest"} />
+                            <input
+                              type="text"
+                              name="name"
+                              className="w-full rounded-md border p-2"
+                              value={updatedUser.name}
+                              onChange={handleProfileChange}
+                            />
                           </div>
                           <div className="space-y-2">
                             <label className="text-sm font-medium">Email</label>
                             <input
                               type="email"
+                              name="email"
                               className="w-full rounded-md border p-2"
-                              defaultValue={user?.email || "No email available"}
+                              value={updatedUser.email}
+                              onChange={handleProfileChange}
                             />
                           </div>
                         </div>
@@ -912,7 +955,13 @@ Geography is the study of the Earth's physical features, climate, and human inte
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button className="w-full">Save Profile</Button>
+                    <Button
+                      className="w-full"
+                      onClick={handleProfileUpdate}
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? "Updating..." : "Save Profile"}
+                    </Button>
                   </CardFooter>
                 </Card>
 

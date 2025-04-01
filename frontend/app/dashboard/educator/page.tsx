@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { BookOpen, FileText, Home, LogOut, Plus, Settings, Upload, Users } from "lucide-react"
 import { motion } from "framer-motion"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -34,6 +35,8 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
 export default function EducatorDashboard() {
+  const router = useRouter()
+  const [user, setUser] = useState<{ id: string; name: string; email: string; role: string } | null>(null)
   const [activeTab, setActiveTab] = useState("overview")
   const [uploadedAnswerScripts, setUploadedAnswerScripts] = useState<string[]>([])
   const [uploadedReferenceAnswers, setUploadedReferenceAnswers] = useState<string[]>([])
@@ -51,6 +54,18 @@ export default function EducatorDashboard() {
   const [showMarksList, setShowMarksList] = useState(false); // State to toggle marks list display
   const [examName, setExamName] = useState<string | null>(null); // State for exam name
   const [isExamSetupComplete, setIsExamSetupComplete] = useState(false); // State to track if initial setup is complete
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user")
+    if (storedUser) {
+      setUser(JSON.parse(storedUser))
+    }
+  }, [])
+
+  const handleSignOut = () => {
+    localStorage.removeItem("user") // Clear user data from localStorage
+    router.push("/") // Redirect to login page
+  }
 
   const handleExamSetupComplete = () => {
     if (examName && students.length > 0 && processedReferenceText) {
@@ -350,13 +365,13 @@ export default function EducatorDashboard() {
             <div className="flex items-center gap-2">
               <Avatar>
                 <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Avatar" />
-                <AvatarFallback>JD</AvatarFallback>
+                <AvatarFallback>{user?.name?.[0] || "?"}</AvatarFallback>
               </Avatar>
               <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-medium">Dr. Jane Doe</p>
-                <p className="truncate text-xs text-muted-foreground">jane.doe@university.edu</p>
+                <p className="text-sm font-medium">{user?.name || "Guest"}</p>
+                <p className="truncate text-xs text-muted-foreground">{user?.email || "No email available"}</p>
               </div>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
@@ -376,7 +391,7 @@ export default function EducatorDashboard() {
               <ThemeToggle />
               <Avatar>
                 <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Avatar" />
-                <AvatarFallback>JD</AvatarFallback>
+                <AvatarFallback>{user?.name?.[0] || "?"}</AvatarFallback>
               </Avatar>
             </div>
           </DashboardHeader>

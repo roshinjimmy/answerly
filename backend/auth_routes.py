@@ -117,3 +117,32 @@ async def login_user(user: UserLogin):
     except Exception as e:
         logging.error(f"Login error: {str(e)}")
         return {"success": False, "message": f"Login failed: {str(e)}"}
+
+@router.put("/api/users/{user_id}")
+async def update_user(user_id: str, updated_data: dict):
+    try:
+        # Fetch the user by ID
+        response = users_table.scan(
+            FilterExpression="id = :user_id",
+            ExpressionAttributeValues={":user_id": user_id},
+        )
+        if not response.get("Items"):
+            raise HTTPException(status_code=404, detail="User not found")
+
+        user = response["Items"][0]
+
+        # Ensure the original email and role keys are preserved
+        updated_user = {
+            **user,
+            **updated_data,
+            "email": user["email"],  # Preserve original email
+            "role": user["role"],    # Preserve original role
+        }
+
+        # Update user data in DynamoDB
+        users_table.put_item(Item=updated_user)
+
+        return {"success": True, "message": "User updated successfully"}
+    except Exception as e:
+        logging.error(f"Error updating user: {str(e)}")
+        return {"success": False, "message": f"Failed to update user: {str(e)}"}
