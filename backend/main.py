@@ -102,12 +102,12 @@ async def evaluate_answers(
     except Exception as e:
         logging.error(f"Evaluation failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Evaluation failed: {str(e)}")
-
 def compare_texts_with_gemini(reference_text: str, answer_text: str) -> float:
     """
     Uses Gemini AI to evaluate text similarity.
     """
     try:
+        print("compare_texts_with_gemini function called")  # Display message in terminal/console
         model = genai.GenerativeModel("gemini-2.0-flash")
         prompt = f"""
         Given these two texts, compute their similarity on a scale of 0 to 1:
