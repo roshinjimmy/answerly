@@ -24,17 +24,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load Google Cloud Vision API credentials
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "./aerial-vehicle-453306-h5-c1c866d1a4f3.json"
 
-# Initialize Vision API client
 vision_client = vision.ImageAnnotatorClient()
 
-# Load fine-tuned SBERT Model for Semantic Similarity
-sbert_model_path = "model/fine_tuned_sbert"  # Path to the fine-tuned model
-sbert_model = SentenceTransformer(sbert_model_path)
+sbert_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
-# ✅ Hardcoded Gemini API Key (Replace with your actual key)
 GEMINI_API_KEY = "AIzaSyBDsbCZhJuuRxcnNeS5d9S8L_9CglI__fE"
 
 # Initialize Gemini API
@@ -73,7 +68,7 @@ async def evaluate_answers(
     model: str = Form(...)
 ):
     """
-    Evaluates the student's answer against the reference answer using fine-tuned SBERT or Gemini.
+    Evaluates the student's answer against the reference answer using SBERT or Gemini.
     """
     try:
         if model not in VALID_MODELS:
