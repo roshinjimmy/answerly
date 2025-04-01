@@ -37,6 +37,8 @@ import { saveAs } from "file-saver";
 export default function EducatorDashboard() {
   const router = useRouter()
   const [user, setUser] = useState<{ id: string; name: string; email: string; role: string } | null>(null)
+  const [updatedUser, setUpdatedUser] = useState<{ name: string; email: string }>({ name: "", email: "" });
+  const [isUpdating, setIsUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState("overview")
   const [uploadedAnswerScripts, setUploadedAnswerScripts] = useState<string[]>([])
   const [uploadedReferenceAnswers, setUploadedReferenceAnswers] = useState<string[]>([])
@@ -58,7 +60,9 @@ export default function EducatorDashboard() {
   useEffect(() => {
     const storedUser = localStorage.getItem("user")
     if (storedUser) {
-      setUser(JSON.parse(storedUser))
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      setUpdatedUser({ name: parsedUser.name, email: parsedUser.email });
     }
   }, [])
 
@@ -66,6 +70,37 @@ export default function EducatorDashboard() {
     localStorage.removeItem("user") // Clear user data from localStorage
     router.push("/") // Redirect to login page
   }
+
+  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setUpdatedUser((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleProfileUpdate = async () => {
+    if (!user) return;
+    setIsUpdating(true);
+
+    try {
+      const response = await axios.put(`http://localhost:8000/api/users/${user.id}`, {
+        name: updatedUser.name,
+        email: updatedUser.email,
+      });
+
+      if (response.data.success) {
+        const updatedUserData = { ...user, ...updatedUser };
+        setUser(updatedUserData);
+        localStorage.setItem("user", JSON.stringify(updatedUserData));
+        alert("Profile updated successfully!");
+      } else {
+        alert("Failed to update profile. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      alert("An error occurred while updating your profile.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const handleExamSetupComplete = () => {
     if (examName && students.length > 0 && processedReferenceText) {
@@ -350,10 +385,10 @@ export default function EducatorDashboard() {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={activeTab === "settings"}>
-                      <Link href="#settings" onClick={() => setActiveTab("settings")}>
+                    <SidebarMenuButton asChild isActive={activeTab === "profile"}>
+                      <Link href="#profile" onClick={() => setActiveTab("profile")}>
                         <Settings className="h-4 w-4" />
-                        <span>Settings</span>
+                        <span>Profile</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -405,7 +440,7 @@ export default function EducatorDashboard() {
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="assignments">Exam</TabsTrigger>
                 <TabsTrigger value="students">Students</TabsTrigger>
-                <TabsTrigger value="settings">Settings</TabsTrigger>
+                <TabsTrigger value="profile">Profile</TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="space-y-4">
@@ -929,121 +964,71 @@ export default function EducatorDashboard() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="settings" className="space-y-4">
+              <TabsContent value="profile" className="space-y-4">
                 <Card>
                   <CardHeader>
-                    <CardTitle>AI Evaluation Settings</CardTitle>
-                    <CardDescription>Configure how the AI evaluates student answers</CardDescription>
+                    <CardTitle>Educator Profile</CardTitle>
+                    <CardDescription>View and update your profile information</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Evaluation Strictness</label>
-                        <div className="flex items-center space-x-2">
-                          <input type="range" min="1" max="5" defaultValue="3" className="w-full" />
-                          <span className="text-sm text-muted-foreground">Medium</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Adjust how strictly the AI evaluates answers against reference materials
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Feedback Detail Level</label>
-                        <select className="w-full rounded-md border p-2">
-                          <option>Detailed (Paragraph-level feedback)</option>
-                          <option>Standard (Section-level feedback)</option>
-                          <option>Basic (Overall feedback only)</option>
-                        </select>
-                        <p className="text-xs text-muted-foreground">
-                          Choose how detailed the feedback should be for students
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Automatic Grading</label>
-                        <div className="flex items-center space-x-2">
-                          <input type="checkbox" id="auto-grading" defaultChecked />
-                          <label htmlFor="auto-grading" className="text-sm">
-                            Enable automatic grading
-                          </label>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Allow the AI to assign grades based on evaluation
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Plagiarism Detection</label>
-                        <div className="flex items-center space-x-2">
-                          <input type="checkbox" id="plagiarism" defaultChecked />
-                          <label htmlFor="plagiarism" className="text-sm">
-                            Enable plagiarism detection
-                          </label>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Check student submissions against a database of existing content
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button className="w-full">Save Settings</Button>
-                  </CardFooter>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Notification Preferences</CardTitle>
-                    <CardDescription>Configure how you receive notifications</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">Email Notifications</p>
-                          <p className="text-sm text-muted-foreground">Receive updates via email</p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <input type="checkbox" id="email-notifications" defaultChecked />
+                    <div className="space-y-6">
+                      <div className="flex flex-col items-center space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
+                        <Avatar className="h-24 w-24">
+                          <AvatarImage src="/placeholder.svg?height=96&width=96" alt="Avatar" />
+                          <AvatarFallback>{user?.name?.[0] || "?"}</AvatarFallback>
+                        </Avatar>
+                        <div className="space-y-1 text-center sm:text-left">
+                          <h3 className="text-xl font-bold">{user?.name || "Guest"}</h3>
+                          <p className="text-sm text-muted-foreground">Educator ID: E12345</p>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge>Mathematics</Badge>
+                            <Badge variant="outline">Year 5</Badge>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">New Submission Alerts</p>
-                          <p className="text-sm text-muted-foreground">Get notified when students submit answers</p>
+                      <div className="space-y-4">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Full Name</label>
+                            <input
+                              type="text"
+                              name="name"
+                              className="w-full rounded-md border p-2"
+                              value={updatedUser.name}
+                              onChange={handleProfileChange}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Email</label>
+                            <input
+                              type="email"
+                              name="email"
+                              className="w-full rounded-md border p-2"
+                              value={updatedUser.email}
+                              onChange={handleProfileChange}
+                            />
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <input type="checkbox" id="submission-alerts" defaultChecked />
-                        </div>
-                      </div>
 
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">Reevaluation Requests</p>
-                          <p className="text-sm text-muted-foreground">
-                            Get notified when students request reevaluation
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <input type="checkbox" id="reevaluation-requests" defaultChecked />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">Weekly Summary</p>
-                          <p className="text-sm text-muted-foreground">Receive a weekly summary of activities</p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <input type="checkbox" id="weekly-summary" defaultChecked />
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Bio</label>
+                          <textarea
+                            className="h-24 w-full rounded-md border p-2"
+                            defaultValue="Experienced educator specializing in Mathematics and AI integration in education."
+                          ></textarea>
                         </div>
                       </div>
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button className="w-full">Save Preferences</Button>
+                    <Button
+                      className="w-full"
+                      onClick={handleProfileUpdate}
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? "Updating..." : "Save Profile"}
+                    </Button>
                   </CardFooter>
                 </Card>
               </TabsContent>
