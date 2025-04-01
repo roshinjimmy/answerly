@@ -498,6 +498,27 @@ const handleAnswerSheetUpload = async (files: File[]) => {
                     </Button>
                   </CardFooter>
                 </Card>
+
+                {showExtractedText && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
+                  >
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Extracted Text</CardTitle>
+                        <CardDescription>Text extracted from your uploaded answer sheet</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="max-h-60 overflow-y-auto rounded-md border bg-muted p-4">
+                          <p className="whitespace-pre-line">{extractedText}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
+                
                 {showResults && evaluationResults && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -553,44 +574,6 @@ const handleAnswerSheetUpload = async (files: File[]) => {
                             </div>
                           </div>
                           
-                          <div className="space-y-3">
-                            <h4 className="text-sm font-medium">Suggestions for Improvement:</h4>
-                            <div className="space-y-2">
-                              {evaluationResults.marks_obtained < 90 && (
-                                <>
-                                  <div className="flex items-start gap-2">
-                                    <div className="mt-0.5 h-4 w-4 rounded-full bg-blue-500 flex items-center justify-center">
-                                      <span className="text-[10px] text-white">1</span>
-                                    </div>
-                                    <p className="text-sm">Include more specific examples of how geography influences urban planning and development.</p>
-                                  </div>
-                                  
-                                  <div className="flex items-start gap-2">
-                                    <div className="mt-0.5 h-4 w-4 rounded-full bg-blue-500 flex items-center justify-center">
-                                      <span className="text-[10px] text-white">2</span>
-                                    </div>
-                                    <p className="text-sm">Elaborate on the connection between geography and climate change adaptation strategies.</p>
-                                  </div>
-                                  
-                                  <div className="flex items-start gap-2">
-                                    <div className="mt-0.5 h-4 w-4 rounded-full bg-blue-500 flex items-center justify-center">
-                                      <span className="text-[10px] text-white">3</span>
-                                    </div>
-                                    <p className="text-sm">Discuss how geographic information systems (GIS) are used in modern geographic analysis.</p>
-                                  </div>
-                                </>
-                              )}
-                              
-                              {evaluationResults.marks_obtained >= 90 && (
-                                <div className="flex items-start gap-2">
-                                  <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                  </svg>
-                                  <p className="text-sm">Your answer is comprehensive and well-structured. Keep up the excellent work!</p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
                           
                           <div className="space-y-2">
                             <h4 className="text-sm font-medium">Reference Answer:</h4>
@@ -614,58 +597,7 @@ const handleAnswerSheetUpload = async (files: File[]) => {
                 )}
                 
 
-                {showExtractedText && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4 }}
-                  >
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Extracted Text</CardTitle>
-                        <CardDescription>Text extracted from your uploaded answer sheet</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="max-h-60 overflow-y-auto rounded-md border bg-muted p-4">
-                          <p className="whitespace-pre-line">{extractedText}</p>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="flex justify-between">
-                        <Button variant="outline">Edit Extracted Text</Button>
-                        <Button>Confirm & Submit</Button>
-                      </CardFooter>
-                    </Card>
-                  </motion.div>
-                )}
-                      <CardContent>
-                        <div className="max-h-60 overflow-y-auto rounded-md border bg-muted p-4">
-                          {isEditingText ? (
-                            <textarea 
-                              className="w-full h-full min-h-[200px] p-2 border-0 bg-transparent focus:outline-none focus:ring-0" 
-                              value={extractedText}
-                              onChange={(e) => setExtractedText(e.target.value)}
-                            />
-                          ) : (
-                            <p className="whitespace-pre-line">{extractedText}</p>
-                          )}
-                        </div>
-                      </CardContent>
-                      <CardFooter className="flex justify-between">
-                        <Button 
-                          variant="outline" 
-                          onClick={() => setIsEditingText(!isEditingText)}
-                        >
-                          {isEditingText ? "Done Editing" : "Edit Extracted Text"}
-                        </Button>
-                        <Button onClick={() => {
-                          if (isEditingText) {
-                            setIsEditingText(false);
-                          }
-                          handleSubmitForEvaluation();
-                        }}>
-                          Confirm & Submit
-                        </Button>
-                      </CardFooter>
+                 
                 <Card>
                   <CardHeader>
                     <CardTitle>Submission History</CardTitle>
@@ -1102,4 +1034,3 @@ const handleAnswerSheetUpload = async (files: File[]) => {
     </SidebarProvider>
   )
 }
-
