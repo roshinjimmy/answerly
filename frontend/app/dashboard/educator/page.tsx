@@ -600,6 +600,18 @@ export default function EducatorDashboard() {
                           className="w-full"
                         />
                       </div>
+                      <div className="mb-4">
+                          <label className="block text-sm font-medium mb-2">Select Evaluation Model</label>
+                          <select
+                            value={selectedModel}
+                            onChange={(e) => setSelectedModel(e.target.value as "sbert" | "gemini")}
+                            className="w-full rounded-md border p-2"
+                          >
+                            <option value="sbert">SBERT</option>
+                            <option value="gemini">Gemini</option>
+                          </select>
+                        </div>
+
                       <div>
                         <label className="block text-sm font-medium mb-2">Upload Student Details</label>
                         <Input
@@ -746,38 +758,7 @@ export default function EducatorDashboard() {
                             </div>
                           </div>
                         )}
-                        <div className="mb-4">
-
-
-                          <label className="block text-sm font-medium mb-2">Select Evaluation Model</label>
-
-
-                          <select
-
-
-                            value={selectedModel}
-
-
-                            onChange={(e) => setSelectedModel(e.target.value as "sbert" | "gemini")}
-
-
-                            className="w-full rounded-md border p-2"
-
-
-                          >
-
-
-                            <option value="sbert">SBERT</option>
-
-
-                            <option value="gemini">Gemini</option>
-
-
-                          </select>
-
-
-                        </div>
-
+                       
                         <Button
                           className="w-full"
                           onClick={handleEvaluateScripts}
