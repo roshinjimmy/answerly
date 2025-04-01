@@ -5,6 +5,7 @@ import Link from "next/link"
 import { BookOpen, FileText, Home, LogOut, RefreshCw, Settings, Upload, User } from "lucide-react"
 import { motion } from "framer-motion"
 import { ThemeToggle } from "@/components/theme-toggle"
+import axios from "axios" // Add this import
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
@@ -35,20 +36,112 @@ export default function StudentDashboard() {
   const [uploadedAnswerSheets, setUploadedAnswerSheets] = useState<string[]>([])
   const [showExtractedText, setShowExtractedText] = useState(false)
   const [extractedText, setExtractedText] = useState("")
+  const [isEditingText, setIsEditingText] = useState(false)
+  // Add new states for evaluation results
+  const [evaluationResults, setEvaluationResults] = useState<{ similarity_score: number; marks_obtained: number } | null>(null)
+  const [isEvaluating, setIsEvaluating] = useState(false)
+  const [showResults, setShowResults] = useState(false)
 
-  const handleAnswerSheetUpload = (files: File[]) => {
-    const newFiles = files.map((file) => file.name)
-    setUploadedAnswerSheets((prev) => [...prev, ...newFiles])
+  // Add reference answer (this would normally come from a database or API)
+  const referenceAnswer = `The Importance of Geography in Understanding the World
+Geography is the study of the Earth's physical features, climate, and human interactions with the environment. It helps us understand how natural processes like weather, landforms, and ecosystems shape our planet. Additionally, geography explains how people adapt to different environments, from deserts to rainforests. By studying geography, we can make informed decisions about urban planning, disaster management, and environmental conservation. It also fosters global awareness by showing the connections between different regions and cultures. Overall, geography is essential for understanding the world and solving real-world challenges.`
 
-    // Simulate text extraction after upload
-    if (files.length > 0) {
-      setTimeout(() => {
-        setExtractedText(
-          "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam euismod, nisl eget aliquam ultricies, nunc nisl aliquet nunc, quis aliquam nisl nunc quis nisl. Nullam euismod, nisl eget aliquam ultricies, nunc nisl aliquet nunc, quis aliquam nisl nunc quis nisl.\n\nPellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget, tempor sit amet, ante. Donec eu libero sit amet quam egestas semper. Aenean ultricies mi vitae est. Mauris placerat eleifend leo.",
-        )
-        setShowExtractedText(true)
-      }, 1500)
+const handleAnswerSheetUpload = async (files: File[]) => {
+  const newFiles = files.map((file) => file.name)
+  setUploadedAnswerSheets((prev) => [...prev, ...newFiles])
+
+  if (files.length > 0) {
+    try {
+      // Create a FormData object to send the file
+      const formData = new FormData()
+      formData.append('file', files[0])
+      
+      // Show loading state
+      setShowExtractedText(false)
+      setExtractedText("Processing your document...")
+      setShowExtractedText(true)
+      
+      // Send the file to the backend API using axios with increased timeout
+      const response = await axios.post('http://localhost:8000/api/upload/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 60000, // Increase timeout to 60 seconds
+      });
+      
+      // Update the extracted text state with the response
+      setExtractedText(response.data.extracted_text || "No text could be extracted from the document.")
+      setShowExtractedText(true)
+    } catch (error) {
+      console.error('Error uploading file:', error)
+      // More detailed error handling
+      let errorMessage = "Error extracting text. Please try again."
+      
+      if (axios.isAxiosError(error)) {
+        if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+          errorMessage = "The request timed out. The document might be too large or complex. Please try again with a simpler document."
+        } else if (error.response) {
+          // Check for specific error messages in the response
+          if (error.response.data && typeof error.response.data === 'object' && error.response.data.detail) {
+            if (error.response.data.detail.includes('session_timed_out') || error.response.data.detail.includes('GOAWAY')) {
+              errorMessage = "The server session timed out. Please try again with a smaller document or try later when the server is less busy."
+            } else {
+              errorMessage = `Error (${error.response.status}): ${error.response.data.detail}`
+            }
+          } else {
+            errorMessage = `Error (${error.response.status}): ${error.message}`
+          }
+        }
+      }
+      
+      setExtractedText(errorMessage)
+      setShowExtractedText(true)
     }
+  }
+}
+  // Add function to handle evaluation submission
+  const handleSubmitForEvaluation = async () => {
+    if (!extractedText) {
+      alert("Please upload and process an answer sheet first.")
+      return
+    }
+
+    setIsEvaluating(true)
+    
+    try {
+      // Simulate API call to evaluate answer
+      // In a real app, you would send both texts to your backend
+      setTimeout(() => {
+        // Calculate similarity (this is a simplified version - in reality use your backend API)
+        const similarity = calculateSimilarity(extractedText, referenceAnswer)
+        const marks = Math.round(similarity * 100)
+        
+        setEvaluationResults({
+          similarity_score: similarity,
+          marks_obtained: marks
+        })
+        
+        setShowResults(true)
+        setIsEvaluating(false)
+      }, 1500)
+    } catch (error) {
+      console.error("Evaluation failed:", error)
+      setIsEvaluating(false)
+      alert("Evaluation failed. Please try again.")
+    }
+  }
+  
+  // Simple similarity calculation function (for demo purposes)
+  const calculateSimilarity = (text1: string, text2: string): number => {
+    // This is a very simplified similarity calculation
+    // In reality, you would use your backend API with SBERT or Gemini
+    const words1 = text1.toLowerCase().split(/\s+/)
+    const words2 = text2.toLowerCase().split(/\s+/)
+    
+    const commonWords = words1.filter(word => words2.includes(word))
+    const similarity = commonWords.length / Math.max(words1.length, words2.length)
+    
+    return Math.min(Math.max(similarity, 0), 1) // Ensure between 0 and 1
   }
 
   const requestRevaluation = () => {
@@ -383,12 +476,143 @@ export default function StudentDashboard() {
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button className="w-full">
-                      <Upload className="mr-2 h-4 w-4" />
-                      Submit for Evaluation
+                    <Button 
+                      className="w-full" 
+                      onClick={handleSubmitForEvaluation}
+                      disabled={!showExtractedText || isEvaluating}
+                    >
+                      {isEvaluating ? (
+                        <>
+                          <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Evaluating...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="mr-2 h-4 w-4" />
+                          Submit for Evaluation
+                        </>
+                      )}
                     </Button>
                   </CardFooter>
                 </Card>
+                {showResults && evaluationResults && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
+                  >
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Evaluation Results</CardTitle>
+                        <CardDescription>AI-powered evaluation of your answer</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-12 w-12">
+                                <AvatarImage src="/placeholder.svg?height=48&width=48" alt="Avatar" />
+                                <AvatarFallback>JS</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <h3 className="font-medium">John Smith</h3>
+                                <p className="text-sm text-muted-foreground">Geography Assignment</p>
+                              </div>
+                            </div>
+                            <div className="mt-2 sm:mt-0 flex items-center gap-2">
+                              <Badge variant={evaluationResults.marks_obtained >= 75 ? "success" : "warning"}>
+                                {evaluationResults.marks_obtained}% Score
+                              </Badge>
+                              <span className="text-sm text-muted-foreground">Evaluated {new Date().toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="rounded-md border bg-muted p-4">
+                            <div className="mb-4">
+                              <div className="mb-1 flex items-center justify-between">
+                                <span className="text-sm">Similarity to Reference Answer</span>
+                                <span className="text-sm font-medium">{(evaluationResults.similarity_score * 100).toFixed(2)}%</span>
+                              </div>
+                              <Progress value={evaluationResults.similarity_score * 100} className="h-2" />
+                            </div>
+                            
+                            <div className="space-y-3">
+                              <h4 className="text-sm font-medium">Feedback:</h4>
+                              <p className="text-sm">
+                                {evaluationResults.marks_obtained >= 90
+                                  ? "Excellent work! Your answer closely matches the reference answer and demonstrates a thorough understanding of the topic."
+                                  : evaluationResults.marks_obtained >= 75
+                                  ? "Good job! Your answer covers most of the key points from the reference answer."
+                                  : evaluationResults.marks_obtained >= 60
+                                  ? "Satisfactory. Your answer includes some important points but could be more comprehensive."
+                                  : "Your answer needs improvement. Consider reviewing the topic and providing more detailed information."}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-3">
+                            <h4 className="text-sm font-medium">Suggestions for Improvement:</h4>
+                            <div className="space-y-2">
+                              {evaluationResults.marks_obtained < 90 && (
+                                <>
+                                  <div className="flex items-start gap-2">
+                                    <div className="mt-0.5 h-4 w-4 rounded-full bg-blue-500 flex items-center justify-center">
+                                      <span className="text-[10px] text-white">1</span>
+                                    </div>
+                                    <p className="text-sm">Include more specific examples of how geography influences urban planning and development.</p>
+                                  </div>
+                                  
+                                  <div className="flex items-start gap-2">
+                                    <div className="mt-0.5 h-4 w-4 rounded-full bg-blue-500 flex items-center justify-center">
+                                      <span className="text-[10px] text-white">2</span>
+                                    </div>
+                                    <p className="text-sm">Elaborate on the connection between geography and climate change adaptation strategies.</p>
+                                  </div>
+                                  
+                                  <div className="flex items-start gap-2">
+                                    <div className="mt-0.5 h-4 w-4 rounded-full bg-blue-500 flex items-center justify-center">
+                                      <span className="text-[10px] text-white">3</span>
+                                    </div>
+                                    <p className="text-sm">Discuss how geographic information systems (GIS) are used in modern geographic analysis.</p>
+                                  </div>
+                                </>
+                              )}
+                              
+                              {evaluationResults.marks_obtained >= 90 && (
+                                <div className="flex items-start gap-2">
+                                  <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                  <p className="text-sm">Your answer is comprehensive and well-structured. Keep up the excellent work!</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-medium">Reference Answer:</h4>
+                            <div className="max-h-40 overflow-y-auto rounded-md border p-3 text-sm">
+                              <p className="whitespace-pre-line">{referenceAnswer}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                      <CardFooter className="flex justify-between">
+                        <Button variant="outline" onClick={() => setShowResults(false)}>
+                          Hide Results
+                        </Button>
+                        <Button variant="outline" onClick={requestRevaluation}>
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Request Reevaluation
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  </motion.div>
+                )}
+                
 
                 {showExtractedText && (
                   <motion.div
@@ -413,7 +637,35 @@ export default function StudentDashboard() {
                     </Card>
                   </motion.div>
                 )}
-
+                      <CardContent>
+                        <div className="max-h-60 overflow-y-auto rounded-md border bg-muted p-4">
+                          {isEditingText ? (
+                            <textarea 
+                              className="w-full h-full min-h-[200px] p-2 border-0 bg-transparent focus:outline-none focus:ring-0" 
+                              value={extractedText}
+                              onChange={(e) => setExtractedText(e.target.value)}
+                            />
+                          ) : (
+                            <p className="whitespace-pre-line">{extractedText}</p>
+                          )}
+                        </div>
+                      </CardContent>
+                      <CardFooter className="flex justify-between">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setIsEditingText(!isEditingText)}
+                        >
+                          {isEditingText ? "Done Editing" : "Edit Extracted Text"}
+                        </Button>
+                        <Button onClick={() => {
+                          if (isEditingText) {
+                            setIsEditingText(false);
+                          }
+                          handleSubmitForEvaluation();
+                        }}>
+                          Confirm & Submit
+                        </Button>
+                      </CardFooter>
                 <Card>
                   <CardHeader>
                     <CardTitle>Submission History</CardTitle>
