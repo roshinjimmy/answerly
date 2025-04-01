@@ -42,7 +42,7 @@ export default function StudentDashboard() {
   const [evaluationResults, setEvaluationResults] = useState<{ similarity_score: number; marks_obtained: number } | null>(null)
   const [isEvaluating, setIsEvaluating] = useState(false)
   const [showResults, setShowResults] = useState(false)
-  const [user, setUser] = useState<{ id: string; name: string; email: string; role: string } | null>(null)
+  const [user, setUser] = useState<{ id: string; name: string; email: string; role: string; class?: string; rollNo?: string } | null>(null)
   const [updatedUser, setUpdatedUser] = useState<{ name: string; email: string }>({ name: "", email: "" })
   const [isUpdating, setIsUpdating] = useState(false)
 
@@ -925,6 +925,8 @@ Geography is the study of the Earth's physical features, climate, and human inte
                         <div className="space-y-1 text-center sm:text-left">
                           <h3 className="text-xl font-bold">{user?.name || "Guest"}</h3>
                           <p className="text-sm text-muted-foreground">Student ID: S12345</p>
+                          <p className="text-sm text-muted-foreground">Class: {user?.class || "N/A"}</p>
+                          <p className="text-sm text-muted-foreground">Roll Number: {user?.rollNo || "N/A"}</p>
                           <div className="flex flex-wrap gap-2">
                             <Badge>Computer Science</Badge>
                             <Badge variant="outline">Year 3</Badge>

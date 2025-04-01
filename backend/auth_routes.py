@@ -21,6 +21,8 @@ class UserRegister(BaseModel):
     email: str
     password: str
     role: str
+    class_name: Optional[str] = None  # Added class column
+    roll_no: Optional[str] = None     # Added roll number column
 
 class UserLogin(BaseModel):
     email: str
@@ -58,7 +60,9 @@ async def register_user(user: UserRegister):
             'name': user.name,
             'email': user.email,  # Partition key
             'role': user.role,    # Sort key
-            'password': hashed_password
+            'password': hashed_password,
+            'class_name': user.class_name,  # Added class column
+            'roll_no': user.roll_no         # Added roll number column
         }
         
         # Save to DynamoDB
@@ -109,7 +113,9 @@ async def login_user(user: UserLogin):
                     "id": item['id'],
                     "name": item['name'],
                     "email": item['email'],
-                    "role": item['role']
+                    "role": item['role'],
+                    "class_name": item.get('class_name', None),  # Added class column
+                    "roll_no": item.get('roll_no', None)         # Added roll number column
                 }
             }
         
@@ -146,3 +152,22 @@ async def update_user(user_id: str, updated_data: dict):
     except Exception as e:
         logging.error(f"Error updating user: {str(e)}")
         return {"success": False, "message": f"Failed to update user: {str(e)}"}
+
+@router.get("/api/students")
+async def get_students():
+    try:
+        # Use an expression attribute name for "role" to avoid conflicts with reserved keywords
+        response = users_table.scan(
+            FilterExpression="#role = :role",
+            ExpressionAttributeNames={"#role": "role"},  # Map #role to the actual attribute name
+            ExpressionAttributeValues={":role": "student"}
+        )
+        students = response.get("Items", [])
+        for student in students:
+            student["class_name"] = student.get("class_name", "N/A")  # Ensure class_name is included
+            student["roll_no"] = student.get("roll_no", "N/A")        # Ensure roll_no is included
+        logging.info(f"Fetched students: {students}")  # Log the fetched students
+        return {"success": True, "students": students}
+    except Exception as e:
+        logging.error(f"Error fetching students: {str(e)}")
+        return {"success": False, "message": f"Failed to fetch students: {str(e)}"}
