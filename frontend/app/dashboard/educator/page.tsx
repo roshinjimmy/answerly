@@ -400,7 +400,15 @@ export default function EducatorDashboard() {
             <div className="flex items-center gap-2">
               <Avatar>
                 <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Avatar" />
-                <AvatarFallback>{user?.name?.[0] || "?"}</AvatarFallback>
+                <AvatarFallback>
+                  {user?.name
+                    ? user.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()
+                    : "?"}
+                </AvatarFallback>
               </Avatar>
               <div className="flex-1 overflow-hidden">
                 <p className="text-sm font-medium">{user?.name || "Guest"}</p>
@@ -426,7 +434,15 @@ export default function EducatorDashboard() {
               <ThemeToggle />
               <Avatar>
                 <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Avatar" />
-                <AvatarFallback>{user?.name?.[0] || "?"}</AvatarFallback>
+                <AvatarFallback>
+                  {user?.name
+                    ? user.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()
+                    : "?"}
+                </AvatarFallback>
               </Avatar>
             </div>
           </DashboardHeader>
@@ -975,7 +991,15 @@ export default function EducatorDashboard() {
                       <div className="flex flex-col items-center space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
                         <Avatar className="h-24 w-24">
                           <AvatarImage src="/placeholder.svg?height=96&width=96" alt="Avatar" />
-                          <AvatarFallback>{user?.name?.[0] || "?"}</AvatarFallback>
+                          <AvatarFallback>
+                            {user?.name
+                              ? user.name
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")
+                                  .toUpperCase()
+                              : "?"}
+                          </AvatarFallback>
                         </Avatar>
                         <div className="space-y-1 text-center sm:text-left">
                           <h3 className="text-xl font-bold">{user?.name || "Guest"}</h3>

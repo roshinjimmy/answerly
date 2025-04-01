@@ -251,7 +251,15 @@ Geography is the study of the Earth's physical features, climate, and human inte
             <div className="flex items-center gap-2">
               <Avatar>
                 <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Avatar" />
-                <AvatarFallback>{user?.name?.[0] || "?"}</AvatarFallback>
+                <AvatarFallback>
+                  {user?.name
+                    ? user.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()
+                    : "?"}
+                </AvatarFallback>
               </Avatar>
               <div className="flex-1 overflow-hidden">
                 <p className="text-sm font-medium">{user?.name || "Guest"}</p>
@@ -277,7 +285,15 @@ Geography is the study of the Earth's physical features, climate, and human inte
               <ThemeToggle />
               <Avatar>
                 <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Avatar" />
-                <AvatarFallback>{user?.name?.[0] || "?"}</AvatarFallback>
+                <AvatarFallback>
+                  {user?.name
+                    ? user.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()
+                    : "?"}
+                </AvatarFallback>
               </Avatar>
             </div>
           </DashboardHeader>
@@ -572,7 +588,15 @@ Geography is the study of the Earth's physical features, climate, and human inte
                             <div className="flex items-center gap-3">
                               <Avatar className="h-12 w-12">
                                 <AvatarImage src="/placeholder.svg?height=48&width=48" alt="Avatar" />
-                                <AvatarFallback>{user?.name?.[0] || "?"}</AvatarFallback>
+                                <AvatarFallback>
+                                  {user?.name
+                                    ? user.name
+                                        .split(" ")
+                                        .map((n) => n[0])
+                                        .join("")
+                                        .toUpperCase()
+                                    : "?"}
+                                </AvatarFallback>
                               </Avatar>
                               <div>
                                 <h3 className="font-medium">{user?.name || "Guest"}</h3>
@@ -888,7 +912,15 @@ Geography is the study of the Earth's physical features, climate, and human inte
                       <div className="flex flex-col items-center space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
                         <Avatar className="h-24 w-24">
                           <AvatarImage src="/placeholder.svg?height=96&width=96" alt="Avatar" />
-                          <AvatarFallback>{user?.name?.[0] || "?"}</AvatarFallback>
+                          <AvatarFallback>
+                            {user?.name
+                              ? user.name
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")
+                                  .toUpperCase()
+                              : "?"}
+                          </AvatarFallback>
                         </Avatar>
                         <div className="space-y-1 text-center sm:text-left">
                           <h3 className="text-xl font-bold">{user?.name || "Guest"}</h3>
