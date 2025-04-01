@@ -129,7 +129,7 @@ export default function EducatorDashboard() {
     }
   };
 
-  const handleAnswerScriptUpload = (files: File[]) => {
+  const handleAnswerScriptUpload = async (files: File[]) => {
     if (files.length === 0) {
       console.warn("No files selected for upload.");
       return;
@@ -137,9 +137,32 @@ export default function EducatorDashboard() {
     const newFiles = files.map((file) => file.name);
     setUploadedAnswerScripts(newFiles); // Reset the uploaded files
     setUploadedAnswerFiles(files); // Reset the uploaded file objects
+
+    try {
+      const formData = new FormData();
+      formData.append("file", files[0]); // Process the first file
+
+      console.log("Sending request to process answer script...");
+      const response = await axios.post("http://localhost:8000/api/upload/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      console.log("Response received:", response.data);
+
+      if (response.data && response.data.extracted_text) {
+        setProcessedAnswerText(response.data.extracted_text); // Set processed text for answer scripts
+        console.log("Processed text set successfully.");
+      } else {
+        console.warn("No extracted text found in the response.");
+        alert("Processing completed, but no text was extracted.");
+      }
+    } catch (error) {
+      console.error("Error processing answer scripts:", error);
+      alert("Failed to process the answer scripts. Please check the backend and try again.");
+    }
   };
 
-  const handleReferenceAnswerUpload = (files: File[]) => {
+  const handleReferenceAnswerUpload = async (files: File[]) => {
     if (files.length === 0) {
       console.warn("No files selected for upload.");
       return;
@@ -147,6 +170,29 @@ export default function EducatorDashboard() {
     const newFiles = files.map((file) => file.name);
     setUploadedReferenceAnswers(newFiles); // Reset the uploaded files
     setUploadedReferenceFiles(files); // Reset the uploaded file objects
+
+    try {
+      const formData = new FormData();
+      formData.append("file", files[0]); // Process the first file
+
+      console.log("Sending request to process reference answer...");
+      const response = await axios.post("http://localhost:8000/api/upload/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      console.log("Response received:", response.data);
+
+      if (response.data && response.data.extracted_text) {
+        setProcessedReferenceText(response.data.extracted_text); // Set processed text for reference answers
+        console.log("Reference answer processed successfully.");
+      } else {
+        console.warn("No extracted text found in the response.");
+        alert("Processing completed, but no text was extracted.");
+      }
+    } catch (error) {
+      console.error("Error processing reference answers:", error);
+      alert("Failed to process the reference answers. Please check the backend and try again.");
+    }
   };
 
   const handleDeleteAnswerScript = (index: number) => {
@@ -161,70 +207,6 @@ export default function EducatorDashboard() {
     setUploadedReferenceFiles((prev) => prev.filter((_, i) => i !== index));
     // Force re-render by resetting the key of the FileUploader
     setFileUploaderKey((prevKey) => prevKey + 1);
-  };
-
-  const handleProcessAnswerScripts = async () => {
-    if (uploadedAnswerFiles.length > 0) {
-      console.log("Processing Answer Scripts:", uploadedAnswerFiles);
-
-      try {
-        const formData = new FormData();
-        formData.append("file", uploadedAnswerFiles[0]); // Process the first file
-
-        console.log("Sending request to process answer script...");
-        const response = await axios.post("http://localhost:8000/api/upload/", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-
-        console.log("Response received:", response.data);
-
-        if (response.data && response.data.extracted_text) {
-          setProcessedAnswerText(response.data.extracted_text); // Set processed text for answer scripts
-          console.log("Processed text set successfully.");
-        } else {
-          console.warn("No extracted text found in the response.");
-          alert("Processing completed, but no text was extracted.");
-        }
-      } catch (error) {
-        console.error("Error processing answer scripts:", error);
-        alert("Failed to process the answer scripts. Please check the backend and try again.");
-      }
-    } else {
-      console.warn("No answer scripts to process.");
-      alert("Please upload answer scripts before processing.");
-    }
-  };
-
-  const handleProcessReferenceAnswers = async () => {
-    if (uploadedReferenceFiles.length > 0) {
-      console.log("Processing Reference Answers:", uploadedReferenceFiles);
-
-      try {
-        const formData = new FormData();
-        formData.append("file", uploadedReferenceFiles[0]); // Process the first file
-
-        console.log("Sending request to process reference answer...");
-        const response = await axios.post("http://localhost:8000/api/upload/", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-
-        console.log("Response received:", response.data);
-
-        if (response.data && response.data.extracted_text) {
-          setProcessedReferenceText(response.data.extracted_text); // Set processed text for reference answers
-          console.log("Reference answer processed successfully.");
-        } else {
-          console.warn("No extracted text found in the response.");
-          alert("Processing completed, but no text was extracted.");
-        }
-      } catch (error) {
-        console.error("Error processing reference answers:", error);
-        alert("Failed to process the reference answers. Please check the backend and try again.");
-      }
-    } else {
-      console.warn("No reference answers to process.");
-      alert("Please upload reference answers before processing.");
-    }
   };
 
   const handleEvaluateScripts = async () => {
@@ -308,6 +290,7 @@ export default function EducatorDashboard() {
 
     if (currentStudentIndex < excelStudents.length - 1) {
       resetUploadAndEvaluationSections();
+      setEvaluationResults(null); // Reset evaluation results
       setCurrentStudentIndex((prevIndex) => prevIndex + 1);
     } else if (currentStudentIndex === excelStudents.length - 1) {
       handleFinishEvaluation(); // Call finish evaluation only when the last student is reached
@@ -317,6 +300,7 @@ export default function EducatorDashboard() {
   const handlePreviousStudent = () => {
     if (currentStudentIndex > 0) {
       resetUploadAndEvaluationSections();
+      setEvaluationResults(null); // Reset evaluation results
       setCurrentStudentIndex((prevIndex) => prevIndex - 1);
     } else {
       alert("No previous students to process.");
@@ -357,7 +341,7 @@ export default function EducatorDashboard() {
     setUploadedAnswerScripts([]);
     setUploadedAnswerFiles([]);
     setProcessedAnswerText(null);
-    setEvaluationResults(null);
+    setEvaluationResults(null); // Ensure evaluation results are reset
     setFileUploaderKey((prevKey) => prevKey + 1); // Reset FileUploader by updating its key
     // Retain uploadedReferenceAnswers and uploadedReferenceFiles to use the same reference key for all students
   };
@@ -740,10 +724,6 @@ export default function EducatorDashboard() {
                           </div>
                         )}
                       </div>
-                      <Button className="w-full" onClick={handleProcessReferenceAnswers}>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Process Reference Answer
-                      </Button>
                       {processedReferenceText && (
                         <div className="mt-4 p-4 border rounded-md bg-black text-white">
                           <h3 className="text-lg font-medium">Processed Reference Answer:</h3>
@@ -810,24 +790,16 @@ export default function EducatorDashboard() {
                             </div>
                           </div>
                         )}
-
-
                       </div>
+                      {processedAnswerText && (
+                        <div className="mt-4 p-4 border rounded-md bg-black text-white">
+                          <h3 className="text-lg font-medium">Processed Answer Text:</h3>
+                          <p className="mt-2">{processedAnswerText}</p>
+                        </div>
+                      )}
                     </CardContent>
                     <CardFooter>
                       <div className="flex flex-col space-y-4 w-full">
-                        <Button className="w-full" onClick={handleProcessAnswerScripts}>
-                          <Upload className="mr-2 h-4 w-4" />
-                          Process Answer Sheet
-                        </Button>
-
-                        {processedAnswerText && (
-                          <div className="mt-4 p-4 border rounded-md bg-black text-white">
-                            <h3 className="text-lg font-medium">Processed Answer Text:</h3>
-                            <p className="mt-2">{processedAnswerText}</p>
-                          </div>
-                        )}
-
                         {evaluationResults && (
                           <div className="mt-4 p-4 border rounded-md bg-black text-white">
                             <h3 className="text-lg font-medium">Evaluation Results:</h3>
